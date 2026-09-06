@@ -4,30 +4,33 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
+  var BURN_MS = 3000;   // сколько горят клетки проигравшего
+  var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   var SIDES = {
-    X: { name: 'Кошечка', short: 'Кошечка', skin: '#skin-kitty', mod: 'kitty' },
-    O: { name: 'Зайка',   short: 'Зайка',   skin: '#skin-bunny', mod: 'bunny' }
+    X: { name: 'Стив',   short: 'Стив',   skin: '#skin-steve',   mod: 'steve'   },
+    O: { name: 'Крипер', short: 'Крипер', skin: '#skin-creeper', mod: 'creeper' }
   };
 
   var WIN_TEXT = {
-    X: ['Три бантика в ряд — красота!',
-        'Кошечка была на шаг быстрее.',
-        'Зайка уже готовит реванш.'],
-    O: ['Зайка собрала линию и хихикает.',
-        'Розовый капюшон принёс удачу.',
-        'Кошечка засмотрелась на бантик.']
+    X: ['Три блока в ряд — постройка завершена.',
+        'Крипер не успел подойти.',
+        'Алмазная кирка отработала смену.'],
+    O: ['Ссссс… БАБАХ. От постройки осталась воронка.',
+        'Стив забыл поставить факелы.',
+        'Мобы захватили все три блока.']
   };
 
   var LEVEL_HINTS = [
-    'Совсем малышка: ходит почти наугад.',
-    'Играет неплохо, но иногда засматривается на бантики.',
+    'Ставит блоки почти наугад — как крипер без цели.',
+    'Считает на пару ходов вперёд, но иногда зевает.',
     'Просчитывает партию до конца. Обыграть нельзя, ничья — уже успех.'
   ];
 
   var SPLASHES = [
-    'Мяу!', 'Бантик к бантику!', 'Сегодня всё в розовом!',
-    'Три в ряд — и ты умница!', 'С молочным коктейлем вкуснее!',
-    'Зайка подглядывает!', 'Обнимашки после игры!', 'Сладкая победа!'
+    'Крипер сзади!', 'Не копай прямо вниз!', 'Осторожно, лава!',
+    '100% без модов!', 'Крафтится само!', 'Три блока в ряд!',
+    'Ночь близко…', 'Алмазы на 12 уровне!'
   ];
 
   var state = {
@@ -35,9 +38,9 @@
     mode: 'ai',       // 'ai' | 'human'
     level: 1,
     board: new Array(9).fill(null),
-    turn: 'X',        // первой ходит Кошечка
+    turn: 'X',        // первым ставит блок Стив
     over: false,
-    busy: false,      // подружка-бот «думает» — ввод заблокирован
+    busy: false,      // бот «думает» — ввод заблокирован
     score: { X: 0, O: 0, D: 0 }
   };
 
@@ -107,7 +110,7 @@
       cell.className = 'cell';
       cell.dataset.index = String(i);
       cell.setAttribute('role', 'gridcell');
-      cell.setAttribute('aria-label', 'Клетка ' + (i + 1) + ', пусто');
+      cell.setAttribute('aria-label', 'Блок ' + (i + 1) + ', пусто');
       cell.addEventListener('click', onCellClick);
       boardEl.appendChild(cell);
     }
@@ -120,15 +123,15 @@
       cell.innerHTML = '';
       cell.className = 'cell';
       cell.disabled = false;
-      cell.setAttribute('aria-label', 'Клетка ' + (index + 1) + ', пусто');
+      cell.setAttribute('aria-label', 'Блок ' + (index + 1) + ', пусто');
       return;
     }
     cell.innerHTML =
-      '<svg class="cell__mark" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<svg class="cell__mark" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">' +
       '<use href="' + SIDES[mark].skin + '"></use></svg>';
     cell.className = 'cell is-taken cell--' + mark;
     cell.disabled = true;
-    cell.setAttribute('aria-label', 'Клетка ' + (index + 1) + ', занята: ' + SIDES[mark].short);
+    cell.setAttribute('aria-label', 'Блок ' + (index + 1) + ', занят: ' + SIDES[mark].short);
   }
 
   function renderBoard() {
@@ -167,11 +170,11 @@
   function updateStatus() {
     if (state.over) return;
     if (state.mode === 'ai' && state.turn !== state.side) {
-      setStatus('Подружка думает…', state.turn);
+      setStatus('Бот выбирает блок…', state.turn);
     } else if (state.mode === 'ai') {
-      setStatus('Твой ход за ' + (state.turn === 'X' ? 'Кошечку' : 'Зайку'), state.turn);
+      setStatus('Твой ход за ' + (state.turn === 'X' ? 'Стива' : 'крипера'), state.turn);
     } else {
-      setStatus('Ходит ' + SIDES[state.turn].name, state.turn);
+      setStatus('Ход: ' + SIDES[state.turn].name, state.turn);
     }
   }
 
@@ -224,32 +227,54 @@
       SFX.orb();
       var playerWon = state.mode === 'human' || winner === state.side;
       setTimeout(playerWon ? SFX.levelUp : SFX.explode, 320);
-      setStatus(SIDES[winner].name + ' победила!', winner);
+      setStatus(SIDES[winner].name + ' победил!', winner);
     } else {
       state.score.D++;
       SFX.draw();
-      setStatus('Ничья — обнимемся!', null);
+      setStatus('Ничья: мир застроен', null);
     }
 
     saveScore();
     renderScore();
-    setTimeout(function () { showOverlay(winner); }, winner ? 900 : 500);
+
+    if (winner) burnLoser(winner, function () { showOverlay(winner); });
+    else setTimeout(function () { showOverlay(null); }, 500);
+  }
+
+  /** Клетки проигравшего вспыхивают и за три секунды выгорают дотла. */
+  function burnLoser(winner, onDone) {
+    var loser = winner === 'X' ? 'O' : 'X';
+    // Координаты считаем от холста: он выступает выше поля, а не совпадает с ним.
+    var origin = $('fire').getBoundingClientRect();
+    var rects = [];
+
+    for (var i = 0; i < 9; i++) {
+      if (state.board[i] !== loser) continue;
+      var cell = boardEl.children[i];
+      cell.classList.add('is-burning');
+      var r = cell.getBoundingClientRect();
+      rects.push({ x: r.left - origin.left, y: r.top - origin.top, w: r.width, h: r.height });
+    }
+
+    if (!rects.length || REDUCED) { setTimeout(onDone, 600); return; }
+    SFX.fire(BURN_MS);
+    Fire.burn($('fire'), rects, BURN_MS, onDone);
   }
 
   function showOverlay(winner) {
     var emblem = $('overlay-emblem').querySelector('use');
 
     if (winner) {
-      $('overlay-eyebrow').textContent = 'Награда получена!';
-      $('overlay-title').textContent = SIDES[winner].name + ' победила!';
+      $('overlay-eyebrow').textContent = 'Достижение получено!';
+      $('overlay-title').textContent = SIDES[winner].name + ' победил!';
       var lines = WIN_TEXT[winner];
       $('overlay-text').textContent = lines[Math.floor(Math.random() * lines.length)];
       emblem.setAttribute('href', SIDES[winner].skin);
     } else {
       $('overlay-eyebrow').textContent = 'Ничья';
-      $('overlay-title').textContent = 'Дружба победила';
-      $('overlay-text').textContent = 'Свободных клеток не осталось, а линии так и нет.';
-      emblem.setAttribute('href', '#skin-kitty');
+      $('overlay-title').textContent = 'Мир застроен';
+      $('overlay-text').textContent = 'Свободных блоков не осталось, а линии так и нет.';
+      emblem.setAttribute('href', '#skin-steve');
     }
     $('overlay').hidden = false;
     $('overlay-again').focus();
@@ -262,6 +287,7 @@
   function newRound() {
     hideOverlay();
     clearBeam();
+    Fire.stop();
     state.board = new Array(9).fill(null);
     state.turn = 'X';
     state.over = false;
@@ -356,7 +382,7 @@
     });
   }
 
-  /* ------------------------- Заставка ------------------------- */
+  /* ------------------------- Главное меню ------------------------- */
 
   function enterWorld() {
     var menu = $('intro');

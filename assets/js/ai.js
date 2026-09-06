@@ -1,4 +1,4 @@
-/* Подружка-бот: минимакс с альфа-бета отсечением и тремя уровнями сложности. */
+/* Мод-бот: минимакс с альфа-бета отсечением и тремя уровнями сложности. */
 window.AI = (function () {
   'use strict';
 
@@ -102,9 +102,9 @@ window.AI = (function () {
   }
 
   var LEVELS = [
-    { name: 'Котёнок',           mistake: 1.00 },  // только тактика и случайность
-    { name: 'Подружка',          mistake: 0.28 },  // иногда зевает
-    { name: 'Королева бантиков', mistake: 0.00 }   // непобедима
+    { name: 'Мирный',     mistake: 1.00 },  // только тактика и случайность
+    { name: 'Нормальный', mistake: 0.28 },  // иногда зевает
+    { name: 'Хардкор',    mistake: 0.00 }   // непобедим
   ];
 
   return {
@@ -118,7 +118,7 @@ window.AI = (function () {
     move: function (board, me, level) {
       var cfg = LEVELS[level] || LEVELS[1];
       if (level === 0) {
-        // Котёнок: половину ходов делает наугад, иначе — простая тактика.
+        // Мирный: половину ходов делает наугад, иначе — простая тактика.
         if (Math.random() < 0.5) return randomMove(board);
         var t = tacticalMove(board, me);
         return t === null ? randomMove(board) : t;
