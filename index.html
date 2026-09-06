@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Крестики-нолики: Война Клеточек</title>
+<meta name="description" content="Крестики-нолики в стиле «Звёздных войн»: Альянс повстанцев против Галактической Империи.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2304060d'/%3E%3Cpath d='M25 25h50v6H25zm0 22h50v6H25zm0 22h50v6H25z' fill='%23ffe81f'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<canvas id="starfield" aria-hidden="true"></canvas>
+
+<!-- Вступительный кроул -->
+<section id="intro" class="intro">
+  <div class="intro__crawl">
+    <p class="intro__episode">Эпизод III·V</p>
+    <h1 class="intro__title">Война<br>Клеточек</h1>
+    <p>Давным-давно в далёкой-предалёкой галактике на девяти секторах
+       нейтрального пространства разгорелась битва.</p>
+    <p>ФЛОТ ПОВСТАНЦЕВ удерживает три сектора по диагонали.
+       ИМПЕРИЯ стягивает звёздные разрушители к центру.</p>
+    <p>Тот, кто первым выстроит три эмблемы в ряд, получит контроль
+       над всем рукавом галактики...</p>
+  </div>
+  <button class="btn btn--ghost intro__skip" type="button" id="skip-intro">Пропустить ▸</button>
+</section>
+
+<main class="app" id="app" hidden>
+
+  <header class="topbar">
+    <h1 class="topbar__logo">Война&nbsp;Клеточек</h1>
+    <button class="icon-btn" id="sound-toggle" type="button"
+            aria-pressed="true" aria-label="Выключить звук" title="Звук">
+      <span class="icon-btn__on">🔊</span><span class="icon-btn__off">🔇</span>
+    </button>
+  </header>
+
+  <!-- Экран выбора -->
+  <section class="panel setup" id="setup" aria-labelledby="setup-title">
+    <h2 class="panel__title" id="setup-title">Выбери сторону</h2>
+
+    <div class="sides">
+      <button class="side side--rebel is-active" type="button" data-side="X" aria-pressed="true">
+        <svg class="side__emblem" viewBox="0 0 100 100" aria-hidden="true"><use href="#emb-rebel"></use></svg>
+        <span class="side__name">Альянс повстанцев</span>
+        <span class="side__hint">Ходит первым</span>
+      </button>
+      <button class="side side--empire" type="button" data-side="O" aria-pressed="false">
+        <svg class="side__emblem" viewBox="0 0 100 100" aria-hidden="true"><use href="#emb-empire"></use></svg>
+        <span class="side__name">Галактическая Империя</span>
+        <span class="side__hint">Ходит второй</span>
+      </button>
+    </div>
+
+    <h2 class="panel__title">Противник</h2>
+    <div class="chips" role="radiogroup" aria-label="Режим игры">
+      <button class="chip is-active" type="button" data-mode="ai" role="radio" aria-checked="true">Дроид</button>
+      <button class="chip" type="button" data-mode="human" role="radio" aria-checked="false">Второй игрок</button>
+    </div>
+
+    <div id="difficulty-block">
+      <h2 class="panel__title">Уровень дроида</h2>
+      <div class="chips" role="radiogroup" aria-label="Сложность">
+        <button class="chip" type="button" data-level="0" role="radio" aria-checked="false">Падаван</button>
+        <button class="chip is-active" type="button" data-level="1" role="radio" aria-checked="true">Рыцарь-джедай</button>
+        <button class="chip" type="button" data-level="2" role="radio" aria-checked="false">Магистр</button>
+      </div>
+      <p class="hint" id="level-hint">Иногда ошибается — у него ещё нет полного доступа к Силе.</p>
+    </div>
+
+    <button class="btn btn--primary" type="button" id="start-game">В бой</button>
+  </section>
+
+  <!-- Игровой экран -->
+  <section class="game" id="game" hidden>
+    <div class="scoreboard">
+      <div class="score score--rebel" id="score-x">
+        <svg class="score__emblem" viewBox="0 0 100 100" aria-hidden="true"><use href="#emb-rebel"></use></svg>
+        <span class="score__label" id="label-x">Повстанцы</span>
+        <span class="score__value" id="value-x">0</span>
+      </div>
+      <div class="score score--draw">
+        <span class="score__label">Ничьи</span>
+        <span class="score__value" id="value-d">0</span>
+      </div>
+      <div class="score score--empire" id="score-o">
+        <svg class="score__emblem" viewBox="0 0 100 100" aria-hidden="true"><use href="#emb-empire"></use></svg>
+        <span class="score__label" id="label-o">Империя</span>
+        <span class="score__value" id="value-o">0</span>
+      </div>
+    </div>
+
+    <p class="status" id="status" role="status" aria-live="polite">Ход Альянса</p>
+
+    <div class="board-wrap">
+      <div class="board" id="board" role="grid" aria-label="Игровое поле три на три"></div>
+      <svg class="board__saber" id="saber" viewBox="0 0 300 300" aria-hidden="true">
+        <line id="saber-line" x1="0" y1="0" x2="0" y2="0"></line>
+      </svg>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--primary" type="button" id="restart">Новый раунд</button>
+      <button class="btn btn--ghost" type="button" id="back">Сменить сторону</button>
+      <button class="btn btn--ghost" type="button" id="reset-score">Сбросить счёт</button>
+    </div>
+
+    <p class="hint hint--keys">Клавиши <kbd>1</kbd>–<kbd>9</kbd> — ход в соответствующий сектор,
+      <kbd>R</kbd> — новый раунд.</p>
+  </section>
+
+  <!-- Итог раунда -->
+  <div class="overlay" id="overlay" hidden>
+    <div class="overlay__card" role="alertdialog" aria-labelledby="overlay-title" aria-modal="true">
+      <svg class="overlay__emblem" id="overlay-emblem" viewBox="0 0 100 100" aria-hidden="true"><use href="#emb-rebel"></use></svg>
+      <h2 class="overlay__title" id="overlay-title">Победа Альянса!</h2>
+      <p class="overlay__text" id="overlay-text">Звезда Смерти уничтожена.</p>
+      <div class="actions">
+        <button class="btn btn--primary" type="button" id="overlay-again">Реванш</button>
+        <button class="btn btn--ghost" type="button" id="overlay-menu">В меню</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">Да пребудет с тобой Сила.</footer>
+</main>
+
+<!-- SVG-спрайт эмблем -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Старберд Альянса -->
+    <g id="emb-rebel">
+      <path d="M50 3 43.6 27.9c-1 3.9-1.5 7.9-1.5 11.9 0 12.1 4.6 23.3 13.3 33.6-1.8.6-3.6.9-5.4.9s-3.6-.3-5.4-.9C53.3 63.1 57.9 51.9 57.9 39.8c0-4-.5-8-1.5-11.9L50 3z"/>
+      <path d="M22.6 20.9c-6.9 8.7-10.9 19.3-11.4 30.4-.9 20.6 10.4 39.6 28.9 48.5l3.6-8.6C28.4 83.9 19.4 68.3 20.1 51.9c.3-7.6 2.7-14.9 6.9-21.2l-4.4-9.8zM77.4 20.9l-4.4 9.8c4.2 6.3 6.6 13.6 6.9 21.2.7 16.4-8.3 32-23.6 39.3l3.6 8.6c18.5-8.9 29.8-27.9 28.9-48.5-.5-11.1-4.5-21.7-11.4-30.4z"/>
+      <path d="M36.3 47.6c-1.7 4.3-2 9-.9 13.5 1.6 6.6 6.2 12 12.4 14.7l2.2-5.3c-4.5-1.9-7.8-5.8-9-10.6-.7-2.9-.5-5.9.5-8.7l-5.2-3.6zM63.7 47.6l-5.2 3.6c1 2.8 1.2 5.8.5 8.7-1.2 4.8-4.5 8.7-9 10.6l2.2 5.3c6.2-2.7 10.8-8.1 12.4-14.7 1.1-4.5.8-9.2-.9-13.5z"/>
+      <circle cx="50" cy="86" r="6"/>
+    </g>
+    <!-- Имперский герб -->
+    <g id="emb-empire">
+      <path d="M50 1a49 49 0 1 0 .001 98A49 49 0 0 0 50 1zm0 7.5a41.5 41.5 0 1 1 0 83 41.5 41.5 0 0 1 0-83z"/>
+      <g id="emp-spokes">
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(0 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(45 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(90 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(135 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(180 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(225 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(270 50 50)"/>
+        <path d="M46 9h8v26l-4 6-4-6z" transform="rotate(315 50 50)"/>
+      </g>
+      <path d="M50 28.5 68 39v22L50 71.5 32 61V39l18-10.5zm0 9L39.8 43.4v13.2L50 62.5l10.2-5.9V43.4L50 37.5z"/>
+    </g>
+  </defs>
+</svg>
+
+<script src="assets/js/starfield.js"></script>
+<script src="assets/js/sfx.js"></script>
+<script src="assets/js/ai.js"></script>
+<script src="assets/js/game.js"></script>
+</body>
+</html>
