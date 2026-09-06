@@ -1,4 +1,4 @@
-/* Звук: всё синтезируется через WebAudio, внешних файлов нет. */
+/* Звук: мягкие тоны, всё синтезируется через WebAudio — внешних файлов нет. */
 window.SFX = (function () {
   'use strict';
 
@@ -58,39 +58,42 @@ window.SFX = (function () {
   }
 
   return {
-    /** Стук поставленного блока — ход Стива. */
+    /** Мягкий «пуф» — ход Кошечки. */
     place: function () {
-      tone({ type: 'sine', from: 220, to: 110, dur: 0.09, vol: 0.16 });
-      noise({ dur: 0.07, vol: 0.1, freq: 700 });
+      tone({ type: 'sine', from: 620, to: 940, dur: 0.12, vol: 0.14 });
+      tone({ type: 'triangle', from: 1240, dur: 0.06, vol: 0.05, delay: 0.02 });
     },
-    /** Глухой шаг мобa — ход крипера. */
+    /** Тот же «пуф», но ниже — ход Зайки. */
     placeMob: function () {
-      tone({ type: 'triangle', from: 150, to: 80, dur: 0.13, vol: 0.15 });
-      noise({ dur: 0.09, vol: 0.09, freq: 420 });
+      tone({ type: 'sine', from: 480, to: 720, dur: 0.13, vol: 0.14 });
+      tone({ type: 'triangle', from: 960, dur: 0.06, vol: 0.05, delay: 0.02 });
     },
-    /** Подбор опыта — линия собрана. */
+    /** Колокольчик — линия собрана. */
     orb: function () {
-      tone({ type: 'square', from: 880, dur: 0.07, vol: 0.09 });
-      tone({ type: 'square', from: 1320, dur: 0.09, vol: 0.08, delay: 0.08 });
+      tone({ type: 'sine', from: 1046, dur: 0.16, vol: 0.1 });
+      tone({ type: 'sine', from: 1568, dur: 0.2, vol: 0.08, delay: 0.09 });
     },
-    /** Новый уровень — победа игрока. */
+    /** Радостная трель — победа. */
     levelUp: function () {
-      [523, 784, 1047, 1568].forEach(function (f, i) {
-        tone({ type: 'triangle', from: f, dur: 0.22, vol: 0.13, delay: i * 0.1 });
+      [659, 784, 988, 1319, 1568].forEach(function (f, i) {
+        tone({ type: 'sine', from: f, dur: 0.26, vol: 0.11, delay: i * 0.09 });
+        tone({ type: 'triangle', from: f * 2, dur: 0.14, vol: 0.04, delay: i * 0.09 });
       });
     },
-    /** Шипение и взрыв крипера — поражение. */
+    /** Огорчённое «у-у» — поражение. */
     explode: function () {
-      noise({ dur: 0.55, vol: 0.14, freq: 900, freqTo: 3200, type: 'bandpass', swell: true });
-      noise({ dur: 0.7, vol: 0.3, freq: 320, freqTo: 60, delay: 0.55 });
-      tone({ type: 'sine', from: 120, to: 35, dur: 0.7, vol: 0.22, delay: 0.55 });
+      tone({ type: 'sine', from: 520, to: 300, dur: 0.4, vol: 0.12 });
+      tone({ type: 'sine', from: 390, to: 220, dur: 0.5, vol: 0.1, delay: 0.28 });
     },
-    /** Ничья — нейтральный сигнал. */
-    draw: function () { tone({ type: 'sine', from: 440, to: 330, dur: 0.35, vol: 0.1 }); },
-    /** Щелчок кнопки меню. */
-    click: function () { tone({ type: 'square', from: 700, dur: 0.05, vol: 0.07 }); },
-    /** Блок уже занят. */
-    denied: function () { tone({ type: 'square', from: 150, to: 100, dur: 0.12, vol: 0.1 }); },
+    /** Ничья — спокойный аккорд. */
+    draw: function () {
+      tone({ type: 'sine', from: 587, dur: 0.35, vol: 0.09 });
+      tone({ type: 'sine', from: 880, dur: 0.35, vol: 0.07, delay: 0.05 });
+    },
+    /** Щелчок по кнопке. */
+    click: function () { tone({ type: 'sine', from: 900, to: 1200, dur: 0.06, vol: 0.07 }); },
+    /** Клетка уже занята. */
+    denied: function () { tone({ type: 'sine', from: 330, to: 240, dur: 0.14, vol: 0.09 }); },
 
     isEnabled: function () { return enabled; },
     toggle: function () {
