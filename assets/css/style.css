@@ -227,6 +227,26 @@ html, body {
   box-shadow: 0 0 16px rgba(79,195,255,.4);
 }
 
+/* Переключатель сложности на игровом экране */
+.level-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+}
+
+.level-bar__label {
+  font-family: Orbitron, sans-serif;
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.chip--sm { padding: 6px 12px; font-size: 12px; }
+
 .hint { margin: 10px 0 0; font-size: 13px; color: var(--text-dim); }
 .hint--keys { text-align: center; margin-top: 22px; }
 kbd {

@@ -34,6 +34,7 @@
   /* ------------------------- Счёт ------------------------- */
 
   var SCORE_KEY = 'sw-ttt-score';
+  var LEVEL_KEY = 'sw-ttt-level';
 
   function loadScore() {
     try {
@@ -59,6 +60,29 @@
       if (opponentIsDroid) suffix = mark === droidMark ? ' (дроид)' : ' (ты)';
       label.textContent = SIDES[mark].short + suffix;
     });
+  }
+
+  /* ------------------------- Уровень дроида ------------------------- */
+
+  /**
+   * Уровень выбирается и в меню, и прямо в бою: обе группы чипов помечены
+   * data-level, поэтому одна функция синхронизирует их разом.
+   * Смена посреди партии действует со следующего хода дроида.
+   */
+  function setLevel(level) {
+    state.level = level;
+    document.querySelectorAll('[data-level]').forEach(function (btn) {
+      var active = Number(btn.dataset.level) === level;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-checked', String(active));
+    });
+    $('level-hint').textContent = LEVEL_HINTS[level];
+    try { localStorage.setItem(LEVEL_KEY, String(level)); } catch (e) {}
+  }
+
+  function loadLevel() {
+    var saved = Number(localStorage.getItem(LEVEL_KEY));
+    setLevel(saved === 0 || saved === 1 || saved === 2 ? saved : state.level);
   }
 
   /* ------------------------- Поле ------------------------- */
@@ -254,6 +278,7 @@
   function startGame() {
     $('setup').hidden = true;
     $('game').hidden = false;
+    $('level-bar').hidden = state.mode !== 'ai';
     renderScore();
     newRound();
   }
@@ -288,14 +313,12 @@
 
     document.querySelectorAll('[data-level]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        state.level = Number(btn.dataset.level);
-        document.querySelectorAll('[data-level]').forEach(function (b) {
-          var active = b === btn;
-          b.classList.toggle('is-active', active);
-          b.setAttribute('aria-checked', String(active));
-        });
-        $('level-hint').textContent = LEVEL_HINTS[state.level];
+        setLevel(Number(btn.dataset.level));
         SFX.click();
+        if (!$('game').hidden && !state.over) {
+          setStatus('Дроид перепрошит: ' + AI.levelName(state.level), null);
+          setTimeout(updateStatus, 1400);
+        }
       });
     });
   }
@@ -357,6 +380,7 @@
   /* ------------------------- Старт ------------------------- */
 
   loadScore();
+  loadLevel();
   buildBoard();
   bindSetup();
   bindControls();
