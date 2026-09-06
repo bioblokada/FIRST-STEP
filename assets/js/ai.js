@@ -1,4 +1,4 @@
-/* Дроид-противник: минимакс с альфа-бета отсечением и тремя уровнями Силы. */
+/* Мод-бот: минимакс с альфа-бета отсечением и тремя уровнями сложности. */
 window.AI = (function () {
   'use strict';
 
@@ -102,9 +102,9 @@ window.AI = (function () {
   }
 
   var LEVELS = [
-    { name: 'Падаван',       mistake: 1.00 },  // только тактика и случайность
-    { name: 'Рыцарь-джедай', mistake: 0.28 },  // иногда промахивается
-    { name: 'Магистр',       mistake: 0.00 }   // непобедим
+    { name: 'Мирный',     mistake: 1.00 },  // только тактика и случайность
+    { name: 'Нормальный', mistake: 0.28 },  // иногда зевает
+    { name: 'Хардкор',    mistake: 0.00 }   // непобедим
   ];
 
   return {
@@ -114,11 +114,11 @@ window.AI = (function () {
     free: free,
     levelName: function (level) { return LEVELS[level].name; },
 
-    /** Ход дроида для выбранного уровня сложности. */
+    /** Ход бота для выбранного уровня сложности. */
     move: function (board, me, level) {
       var cfg = LEVELS[level] || LEVELS[1];
       if (level === 0) {
-        // Падаван: половину ходов делает наугад, иначе — простая тактика.
+        // Мирный: половину ходов делает наугад, иначе — простая тактика.
         if (Math.random() < 0.5) return randomMove(board);
         var t = tacticalMove(board, me);
         return t === null ? randomMove(board) : t;

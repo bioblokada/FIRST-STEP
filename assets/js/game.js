@@ -5,19 +5,29 @@
   var $ = function (id) { return document.getElementById(id); };
 
   var SIDES = {
-    X: { name: 'Альянс повстанцев', short: 'Повстанцы', emblem: '#emb-rebel',  mod: 'rebel'  },
-    O: { name: 'Галактическая Империя', short: 'Империя', emblem: '#emb-empire', mod: 'empire' }
+    X: { name: 'Стив',   short: 'Стив',   skin: '#skin-steve',   mod: 'steve'   },
+    O: { name: 'Крипер', short: 'Крипер', skin: '#skin-creeper', mod: 'creeper' }
   };
 
   var WIN_TEXT = {
-    X: ['Звезда Смерти уничтожена.', 'Флот Империи отступает к Внешнему кольцу.', 'Сила была на твоей стороне.'],
-    O: ['Порядок восстановлен во всей галактике.', 'База повстанцев обращена в пыль.', 'Тёмная сторона оказалась сильнее.']
+    X: ['Три блока в ряд — постройка завершена.',
+        'Крипер не успел подойти.',
+        'Алмазная кирка отработала смену.'],
+    O: ['Ссссс… БАБАХ. От постройки осталась воронка.',
+        'Стив забыл поставить факелы.',
+        'Мобы захватили все три блока.']
   };
 
   var LEVEL_HINTS = [
-    'Только что собран на Татуине: ходит почти наугад.',
-    'Иногда ошибается — у него ещё нет полного доступа к Силе.',
-    'Просчитывает партию до конца. Победить его нельзя, ничья — уже подвиг.'
+    'Ставит блоки почти наугад — как крипер без цели.',
+    'Считает на пару ходов вперёд, но иногда зевает.',
+    'Просчитывает партию до конца. Обыграть нельзя, ничья — уже успех.'
+  ];
+
+  var SPLASHES = [
+    'Крипер сзади!', 'Не копай прямо вниз!', 'Осторожно, лава!',
+    '100% без модов!', 'Крафтится само!', 'Три блока в ряд!',
+    'Ночь близко…', 'Алмазы на 12 уровне!'
   ];
 
   var state = {
@@ -25,9 +35,9 @@
     mode: 'ai',       // 'ai' | 'human'
     level: 1,
     board: new Array(9).fill(null),
-    turn: 'X',        // ходят всегда первыми повстанцы
+    turn: 'X',        // первым ставит блок Стив
     over: false,
-    busy: false,      // дроид «думает» — ввод заблокирован
+    busy: false,      // бот «думает» — ввод заблокирован
     score: { X: 0, O: 0, D: 0 }
   };
 
@@ -52,22 +62,20 @@
     $('value-o').textContent = state.score.O;
     $('value-d').textContent = state.score.D;
 
-    var opponentIsDroid = state.mode === 'ai';
-    var droidMark = state.side === 'X' ? 'O' : 'X';
+    var vsBot = state.mode === 'ai';
+    var botMark = state.side === 'X' ? 'O' : 'X';
     ['X', 'O'].forEach(function (mark) {
-      var label = $('label-' + mark.toLowerCase());
-      var suffix = '';
-      if (opponentIsDroid) suffix = mark === droidMark ? ' (дроид)' : ' (ты)';
-      label.textContent = SIDES[mark].short + suffix;
+      var suffix = vsBot ? (mark === botMark ? ' (бот)' : ' (ты)') : '';
+      $('label-' + mark.toLowerCase()).textContent = SIDES[mark].short + suffix;
     });
   }
 
-  /* ------------------------- Уровень дроида ------------------------- */
+  /* ------------------------- Сложность ------------------------- */
 
   /**
    * Уровень выбирается и в меню, и прямо в бою: обе группы чипов помечены
    * data-level, поэтому одна функция синхронизирует их разом.
-   * Смена посреди партии действует со следующего хода дроида.
+   * Смена посреди партии действует со следующего хода бота.
    */
   function setLevel(level) {
     state.level = level;
@@ -81,7 +89,9 @@
   }
 
   function loadLevel() {
-    var saved = Number(localStorage.getItem(LEVEL_KEY));
+    // Number(null) === 0, поэтому пустое хранилище иначе выбрало бы «Мирный».
+    var raw = localStorage.getItem(LEVEL_KEY);
+    var saved = raw === null ? NaN : Number(raw);
     setLevel(saved === 0 || saved === 1 || saved === 2 ? saved : state.level);
   }
 
@@ -97,7 +107,7 @@
       cell.className = 'cell';
       cell.dataset.index = String(i);
       cell.setAttribute('role', 'gridcell');
-      cell.setAttribute('aria-label', 'Сектор ' + (i + 1) + ', свободен');
+      cell.setAttribute('aria-label', 'Блок ' + (i + 1) + ', пусто');
       cell.addEventListener('click', onCellClick);
       boardEl.appendChild(cell);
     }
@@ -108,17 +118,17 @@
     var mark = state.board[index];
     if (!mark) {
       cell.innerHTML = '';
-      cell.classList.remove('is-taken');
-      cell.setAttribute('aria-label', 'Сектор ' + (index + 1) + ', свободен');
+      cell.className = 'cell';
       cell.disabled = false;
+      cell.setAttribute('aria-label', 'Блок ' + (index + 1) + ', пусто');
       return;
     }
     cell.innerHTML =
-      '<svg class="cell__mark cell__mark--' + mark + '" viewBox="0 0 100 100" aria-hidden="true">' +
-      '<use href="' + SIDES[mark].emblem + '"></use></svg>';
-    cell.classList.add('is-taken');
+      '<svg class="cell__mark" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<use href="' + SIDES[mark].skin + '"></use></svg>';
+    cell.className = 'cell is-taken cell--' + mark;
     cell.disabled = true;
-    cell.setAttribute('aria-label', 'Сектор ' + (index + 1) + ', занят: ' + SIDES[mark].short);
+    cell.setAttribute('aria-label', 'Блок ' + (index + 1) + ', занят: ' + SIDES[mark].short);
   }
 
   function renderBoard() {
@@ -126,7 +136,7 @@
   }
 
   /** Луч по выигрышной линии: клетки в viewBox 300×300 — центры 50/150/250. */
-  function drawSaber(line, mark) {
+  function drawBeam(line) {
     var center = function (idx) {
       return { x: (idx % 3) * 100 + 50, y: Math.floor(idx / 3) * 100 + 50 };
     };
@@ -137,15 +147,12 @@
     lineEl.setAttribute('y1', a.y);
     lineEl.setAttribute('x2', b.x);
     lineEl.setAttribute('y2', b.y);
-    var saber = $('saber');
-    saber.classList.toggle('is-empire', mark === 'O');
-    saber.classList.add('is-on');
-
+    $('saber').classList.add('is-on');
     line.forEach(function (i) { boardEl.children[i].classList.add('is-win'); });
   }
 
-  function clearSaber() {
-    $('saber').classList.remove('is-on', 'is-empire');
+  function clearBeam() {
+    $('saber').classList.remove('is-on');
     Array.prototype.forEach.call(boardEl.children, function (c) { c.classList.remove('is-win'); });
   }
 
@@ -160,9 +167,9 @@
   function updateStatus() {
     if (state.over) return;
     if (state.mode === 'ai' && state.turn !== state.side) {
-      setStatus('Дроид просчитывает варианты…', state.turn);
+      setStatus('Бот выбирает блок…', state.turn);
     } else if (state.mode === 'ai') {
-      setStatus('Твой ход, ' + SIDES[state.turn].short.toLowerCase(), state.turn);
+      setStatus('Твой ход за ' + (state.turn === 'X' ? 'Стива' : 'крипера'), state.turn);
     } else {
       setStatus('Ход: ' + SIDES[state.turn].name, state.turn);
     }
@@ -178,14 +185,13 @@
     if (state.over || state.busy) return;
     if (state.board[index] !== null) { SFX.denied(); return; }
     if (state.mode === 'ai' && state.turn !== state.side) return;
-
     commit(index, state.turn);
   }
 
   function commit(index, mark) {
     state.board[index] = mark;
     renderCell(index);
-    mark === 'X' ? SFX.blaster() : SFX.turbo();
+    mark === 'X' ? SFX.place() : SFX.placeMob();
 
     var line = AI.winningLine(state.board, mark);
     if (line) return finish(mark, line);
@@ -194,16 +200,16 @@
     state.turn = mark === 'X' ? 'O' : 'X';
     updateStatus();
 
-    if (state.mode === 'ai' && state.turn !== state.side) scheduleDroid();
+    if (state.mode === 'ai' && state.turn !== state.side) scheduleBot();
   }
 
-  function scheduleDroid() {
+  function scheduleBot() {
     state.busy = true;
-    var droid = state.turn;
+    var bot = state.turn;
     setTimeout(function () {
       state.busy = false;
       if (state.over) return;
-      commit(AI.move(state.board.slice(), droid, state.level), droid);
+      commit(AI.move(state.board.slice(), bot, state.level), bot);
     }, 420 + Math.random() * 350);
   }
 
@@ -214,15 +220,15 @@
 
     if (winner) {
       state.score[winner]++;
-      drawSaber(line, winner);
-      SFX.saber();
+      drawBeam(line);
+      SFX.orb();
       var playerWon = state.mode === 'human' || winner === state.side;
-      setTimeout(playerWon ? SFX.victory : SFX.defeat, 380);
-      setStatus(winner === 'X' ? 'Победа Альянса!' : 'Империя торжествует!', winner);
+      setTimeout(playerWon ? SFX.levelUp : SFX.explode, 320);
+      setStatus(SIDES[winner].name + ' победил!', winner);
     } else {
       state.score.D++;
       SFX.draw();
-      setStatus('Равновесие Силы', null);
+      setStatus('Ничья: мир застроен', null);
     }
 
     saveScore();
@@ -231,25 +237,21 @@
   }
 
   function showOverlay(winner) {
-    var overlay = $('overlay');
-    var title = $('overlay-title');
-    var text = $('overlay-text');
     var emblem = $('overlay-emblem').querySelector('use');
 
-    overlay.className = 'overlay';
     if (winner) {
-      overlay.classList.add(winner === 'O' ? 'overlay--empire' : 'overlay--rebel');
-      title.textContent = winner === 'X' ? 'Победа Альянса!' : 'Империя торжествует!';
+      $('overlay-eyebrow').textContent = 'Достижение получено!';
+      $('overlay-title').textContent = SIDES[winner].name + ' победил!';
       var lines = WIN_TEXT[winner];
-      text.textContent = lines[Math.floor(Math.random() * lines.length)];
-      emblem.setAttribute('href', SIDES[winner].emblem);
+      $('overlay-text').textContent = lines[Math.floor(Math.random() * lines.length)];
+      emblem.setAttribute('href', SIDES[winner].skin);
     } else {
-      overlay.classList.add('overlay--draw');
-      title.textContent = 'Равновесие Силы';
-      text.textContent = 'Ни одна из сторон не уступила. Девять секторов остались нейтральными.';
-      emblem.setAttribute('href', '#emb-rebel');
+      $('overlay-eyebrow').textContent = 'Ничья';
+      $('overlay-title').textContent = 'Мир застроен';
+      $('overlay-text').textContent = 'Свободных блоков не осталось, а линии так и нет.';
+      emblem.setAttribute('href', '#skin-steve');
     }
-    overlay.hidden = false;
+    $('overlay').hidden = false;
     $('overlay-again').focus();
   }
 
@@ -259,14 +261,14 @@
 
   function newRound() {
     hideOverlay();
-    clearSaber();
+    clearBeam();
     state.board = new Array(9).fill(null);
     state.turn = 'X';
     state.over = false;
     state.busy = false;
     renderBoard();
     updateStatus();
-    if (state.mode === 'ai' && state.side === 'O') scheduleDroid();
+    if (state.mode === 'ai' && state.side === 'O') scheduleBot();
   }
 
   function showSetup() {
@@ -286,7 +288,7 @@
   /* ------------------------- Настройки ------------------------- */
 
   function bindSetup() {
-    Array.prototype.forEach.call(document.querySelectorAll('.side'), function (btn) {
+    document.querySelectorAll('.side').forEach(function (btn) {
       btn.addEventListener('click', function () {
         state.side = btn.dataset.side;
         document.querySelectorAll('.side').forEach(function (b) {
@@ -316,7 +318,7 @@
         setLevel(Number(btn.dataset.level));
         SFX.click();
         if (!$('game').hidden && !state.over) {
-          setStatus('Дроид перепрошит: ' + AI.levelName(state.level), null);
+          setStatus('Сложность: ' + AI.levelName(state.level), null);
           setTimeout(updateStatus, 1400);
         }
       });
@@ -354,27 +356,26 @@
     });
   }
 
-  /* ------------------------- Вступление ------------------------- */
+  /* ------------------------- Главное меню ------------------------- */
 
-  function endIntro() {
-    var intro = $('intro');
-    if (!intro || intro.classList.contains('is-leaving')) return;
-    intro.classList.add('is-leaving');
+  function enterWorld() {
+    var menu = $('intro');
+    if (!menu || menu.classList.contains('is-leaving')) return;
+    SFX.click();
+    menu.classList.add('is-leaving');
     $('app').hidden = false;
-    setTimeout(function () { intro.remove(); }, 800);
+    setTimeout(function () { menu.remove(); }, 350);
   }
 
-  function bindIntro() {
-    var intro = $('intro');
-    if (!intro) { $('app').hidden = false; return; }
-    $('skip-intro').addEventListener('click', endIntro);
-    intro.addEventListener('click', function (e) {
-      if (e.target.id !== 'skip-intro') endIntro();
+  function bindMenu() {
+    var menu = $('intro');
+    if (!menu) { $('app').hidden = false; return; }
+    $('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+    $('enter-world').addEventListener('click', enterWorld);
+    document.addEventListener('keydown', function (e) {
+      if (!$('intro') || $('intro').classList.contains('is-leaving')) return;
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enterWorld(); }
     });
-    var crawl = intro.querySelector('.intro__crawl');
-    crawl.addEventListener('animationend', endIntro);
-    // Страховка, если анимация не запустилась (reduced motion, фоновая вкладка).
-    setTimeout(endIntro, 20000);
   }
 
   /* ------------------------- Старт ------------------------- */
@@ -384,6 +385,6 @@
   buildBoard();
   bindSetup();
   bindControls();
-  bindIntro();
+  bindMenu();
   renderScore();
 })();
