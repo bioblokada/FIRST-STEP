@@ -28,7 +28,7 @@ window.Fire = (function () {
   function spawnFlame(area) {
     particles.push({
       x: rand(area.x + 2, area.x + area.w - 2),
-      y: rand(area.y + area.h * 0.55, area.y + area.h),
+      y: rand(area.y + area.h * 0.35, area.y + area.h * 0.95),
       vx: rand(-0.22, 0.22),
       vy: rand(-1.7, -0.6),
       size: rand(6, 13),

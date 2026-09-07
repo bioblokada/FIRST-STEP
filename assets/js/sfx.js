@@ -85,16 +85,32 @@ window.SFX = (function () {
       noise({ dur: 0.7, vol: 0.3, freq: 320, freqTo: 60, delay: 0.55 });
       tone({ type: 'sine', from: 120, to: 35, dur: 0.7, vol: 0.22, delay: 0.55 });
     },
-    /** Костёр: вспышка и потрескивание на всё время горения. */
+    /**
+     * Костёр: вспышка, ровный гул на всё время горения, потрескивание
+     * и обрушение головёшек в конце.
+     */
     fire: function (ms) {
       var seconds = (ms || 3000) / 1000;
-      noise({ dur: 0.5, vol: 0.16, freq: 300, freqTo: 2400, type: 'bandpass', swell: true });
-      tone({ type: 'sawtooth', from: 90, to: 240, dur: 0.4, vol: 0.08 });
+
+      // Поджиг.
+      noise({ dur: 0.6, vol: 0.24, freq: 260, freqTo: 2600, type: 'bandpass', swell: true });
+      tone({ type: 'sawtooth', from: 80, to: 260, dur: 0.5, vol: 0.12 });
+
+      // Гул пламени: низкий рокот и шипящий верх, оба затухают к концу.
+      noise({ dur: seconds, vol: 0.18, freq: 900, freqTo: 200, type: 'lowpass' });
+      noise({ dur: seconds - 0.2, vol: 0.09, freq: 1900, freqTo: 600, type: 'bandpass', delay: 0.2 });
+
       // Потрескивание: короткие щелчки со случайными паузами.
-      for (var t = 0.15; t < seconds - 0.3; t += 0.08 + Math.random() * 0.16) {
-        noise({ dur: 0.05 + Math.random() * 0.06, vol: 0.05 + Math.random() * 0.06,
-                freq: 1200 + Math.random() * 2600, type: 'bandpass', delay: t });
+      for (var t = 0.12; t < seconds - 0.4; t += 0.05 + Math.random() * 0.13) {
+        noise({ dur: 0.04 + Math.random() * 0.05,
+                vol: 0.08 + Math.random() * 0.09,
+                freq: 1400 + Math.random() * 3000,
+                type: 'bandpass', delay: t });
       }
+
+      // Блок обрушается в угли.
+      tone({ type: 'sine', from: 160, to: 45, dur: 0.5, vol: 0.2, delay: seconds - 0.55 });
+      noise({ dur: 0.45, vol: 0.2, freq: 500, freqTo: 90, delay: seconds - 0.55 });
     },
     /** Ничья — нейтральный сигнал. */
     draw: function () { tone({ type: 'sine', from: 440, to: 330, dur: 0.35, vol: 0.1 }); },

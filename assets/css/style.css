@@ -319,18 +319,50 @@ kbd {
 
 /* ---------------------- Поле ---------------------- */
 
-.board-wrap { position: relative; width: min(420px, 92vw); margin: 0 auto; }
+/* Поле объёмное: наклонённая плоскость с настоящими блоками на ней. */
+.board-wrap {
+  position: relative;
+  width: min(420px, 92vw);
+  margin: 0 auto;
+  padding: 30px 0 40px;
+  perspective: 820px;
+  perspective-origin: 50% 42%;
+}
 
 .board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 6px;
+  gap: 14px;
+  padding: 12px;
   aspect-ratio: 1;
+  background-color: #3a3a3a;
+  border: 4px solid;
+  border-color: #5c5c5c #1f1f1f #1f1f1f #5c5c5c;
+  transform: rotateX(34deg);
+  transform-style: preserve-3d;
+}
+
+/* Подставка под плитой — её торец виден из-под наклона. */
+.board::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 100%;
+  height: 34px;
+  background: linear-gradient(#2a2a2a, #161616);
+  border: 4px solid;
+  border-color: #4a4a4a #141414 #141414 #4a4a4a;
+  border-top: none;
+  transform-origin: top center;
+  transform: rotateX(-90deg);
 }
 
 /* Пустая клетка — блок камня. */
 .cell {
+  --lift: 10px;             /* насколько блок выступает над плитой */
+  --side: #5a5a5a;          /* цвет торца блока */
   position: relative;
   display: grid;
   place-items: center;
@@ -342,20 +374,43 @@ kbd {
     repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 6px, transparent 6px 12px);
   border: 4px solid;
   border-color: var(--stone-light) var(--stone-dark) var(--stone-dark) var(--stone-light);
+  transform-style: preserve-3d;
+  transform: translateZ(var(--lift));
+  transition: transform .18s ease;
 }
-/* Курсор обводит блок чёрной рамкой — как прицел в игре. */
-.cell:hover:not(.is-taken):not(:disabled) { outline: 3px solid rgba(0,0,0,.9); outline-offset: -3px; }
+
+/* Передний торец блока: висит на нижней грани и уходит вниз до плиты. */
+.cell::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 100%;
+  height: var(--lift);
+  background: linear-gradient(var(--side), rgba(0, 0, 0, .55));
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, .1), inset -3px 0 0 rgba(0, 0, 0, .35);
+  transform-origin: top center;
+  transform: rotateX(-90deg);
+}
+/* Курсор обводит блок чёрной рамкой и приподнимает его. */
+.cell:hover:not(.is-taken):not(:disabled) {
+  outline: 3px solid rgba(0,0,0,.9);
+  outline-offset: -3px;
+  --lift: 22px;
+}
 .cell.is-taken { cursor: not-allowed; }
 .cell:disabled { cursor: default; }
 
-/* Занятая клетка — поставленный блок с лицом. */
-.cell--X { background-color: #7d6b58; border-color: #a08c76 #4a3d31 #4a3d31 #a08c76; }
-.cell--O { background-color: #4a7a3d; border-color: #6fa85c #2c4a24 #2c4a24 #6fa85c; }
+/* Занятая клетка — поставленный блок с лицом, он выше пустой ячейки. */
+.cell--X { --lift: 34px; --side: #6b5a4a; background-color: #7d6b58; border-color: #a08c76 #4a3d31 #4a3d31 #a08c76; }
+.cell--O { --lift: 34px; --side: #3f6733; background-color: #4a7a3d; border-color: #6fa85c #2c4a24 #2c4a24 #6fa85c; }
 
 .cell__mark { width: 100%; height: 100%; animation: place .18s steps(3) both; }
 @keyframes place { from { transform: scale(.55); } to { transform: scale(1); } }
 
 .cell.is-win {
+  --lift: 46px;
+  --side: #c98b00;
   background-color: var(--gold);
   border-color: #ffd166 #a06b00 #a06b00 #ffd166;
   animation: win-blink .7s steps(2) infinite alternate;
@@ -377,7 +432,12 @@ kbd {
 }
 
 /* Клетка обугливается: сначала жар изнутри, потом остывший уголь. */
-.cell.is-burning { animation: cell-char 3s ease-in forwards; }
+.cell.is-burning { --side: #241c17; animation: cell-char 3s ease-in forwards, cell-sink 3s ease-in forwards; }
+@keyframes cell-sink {
+  from { transform: translateZ(34px); }
+  70%  { transform: translateZ(14px); }
+  to   { transform: translateZ(2px); }
+}
 @keyframes cell-char {
   0%   { box-shadow: inset 0 0 0 rgba(255, 140, 0, 0); }
   18%  { box-shadow: inset 0 -20px 26px rgba(255, 130, 0, .9); }
@@ -408,10 +468,12 @@ kbd {
 /* Луч по выигрышной линии — прямоугольный, без сглаживания. */
 .board__beam {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 0;
+  right: 0;
+  top: 26px;
+  height: calc(100% - 60px);
   pointer-events: none;
+  transform: rotateX(34deg) translateZ(48px);
 }
 .board__beam line {
   stroke: #fff8d0;
