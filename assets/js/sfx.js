@@ -57,50 +57,107 @@ window.SFX = (function () {
     src.start(t0);
   }
 
+  /* --------- Наборы звуков по темам --------- */
+
+  var SETS = {
+    mc: {
+      /** Стук поставленного блока. */
+      place: function () {
+        tone({ type: 'sine', from: 220, to: 110, dur: 0.09, vol: 0.16 });
+        noise({ dur: 0.07, vol: 0.1, freq: 700 });
+      },
+      /** Глухой шаг моба. */
+      placeMob: function () {
+        tone({ type: 'triangle', from: 150, to: 80, dur: 0.13, vol: 0.15 });
+        noise({ dur: 0.09, vol: 0.09, freq: 420 });
+      },
+      /** Подбор опыта — линия собрана. */
+      orb: function () {
+        tone({ type: 'square', from: 880, dur: 0.07, vol: 0.09 });
+        tone({ type: 'square', from: 1320, dur: 0.09, vol: 0.08, delay: 0.08 });
+      },
+      /** Новый уровень — победа игрока. */
+      levelUp: function () {
+        [523, 784, 1047, 1568].forEach(function (f, i) {
+          tone({ type: 'triangle', from: f, dur: 0.22, vol: 0.13, delay: i * 0.1 });
+        });
+      },
+      /** Шипение и взрыв крипера — поражение. */
+      lose: function () {
+        noise({ dur: 0.55, vol: 0.14, freq: 900, freqTo: 3200, type: 'bandpass', swell: true });
+        noise({ dur: 0.7, vol: 0.3, freq: 320, freqTo: 60, delay: 0.55 });
+        tone({ type: 'sine', from: 120, to: 35, dur: 0.7, vol: 0.22, delay: 0.55 });
+      },
+      draw: function () { tone({ type: 'sine', from: 440, to: 330, dur: 0.4, vol: 0.1 }); },
+      click: function () { tone({ type: 'square', from: 700, dur: 0.05, vol: 0.07 }); },
+      denied: function () { tone({ type: 'square', from: 150, to: 100, dur: 0.12, vol: 0.1 }); }
+    },
+
+    kitty: {
+      /** Мягкий «пуф». */
+      place: function () {
+        tone({ type: 'sine', from: 620, to: 940, dur: 0.12, vol: 0.14 });
+        tone({ type: 'triangle', from: 1240, dur: 0.06, vol: 0.05, delay: 0.02 });
+      },
+      placeMob: function () {
+        tone({ type: 'sine', from: 480, to: 720, dur: 0.13, vol: 0.14 });
+        tone({ type: 'triangle', from: 960, dur: 0.06, vol: 0.05, delay: 0.02 });
+      },
+      /** Колокольчик. */
+      orb: function () {
+        tone({ type: 'sine', from: 1046, dur: 0.16, vol: 0.1 });
+        tone({ type: 'sine', from: 1568, dur: 0.2, vol: 0.08, delay: 0.09 });
+      },
+      /** Радостная трель. */
+      levelUp: function () {
+        [659, 784, 988, 1319, 1568].forEach(function (f, i) {
+          tone({ type: 'sine', from: f, dur: 0.26, vol: 0.11, delay: i * 0.09 });
+          tone({ type: 'triangle', from: f * 2, dur: 0.14, vol: 0.04, delay: i * 0.09 });
+        });
+      },
+      /** Огорчённое «у-у». */
+      lose: function () {
+        tone({ type: 'sine', from: 520, to: 300, dur: 0.4, vol: 0.12 });
+        tone({ type: 'sine', from: 390, to: 220, dur: 0.5, vol: 0.1, delay: 0.28 });
+      },
+      draw: function () {
+        tone({ type: 'sine', from: 587, dur: 0.35, vol: 0.09 });
+        tone({ type: 'sine', from: 880, dur: 0.35, vol: 0.07, delay: 0.05 });
+      },
+      click: function () { tone({ type: 'sine', from: 900, to: 1200, dur: 0.06, vol: 0.07 }); },
+      denied: function () { tone({ type: 'sine', from: 330, to: 240, dur: 0.14, vol: 0.09 }); }
+    }
+  };
+
+  var set = SETS.mc;
+
+  function play(name) { return function () { set[name](); }; }
+
   return {
-    /** Стук поставленного блока — ход Стива. */
-    place: function () {
-      tone({ type: 'sine', from: 220, to: 110, dur: 0.09, vol: 0.16 });
-      noise({ dur: 0.07, vol: 0.1, freq: 700 });
-    },
-    /** Глухой шаг мобa — ход крипера. */
-    placeMob: function () {
-      tone({ type: 'triangle', from: 150, to: 80, dur: 0.13, vol: 0.15 });
-      noise({ dur: 0.09, vol: 0.09, freq: 420 });
-    },
-    /** Подбор опыта — линия собрана. */
-    orb: function () {
-      tone({ type: 'square', from: 880, dur: 0.07, vol: 0.09 });
-      tone({ type: 'square', from: 1320, dur: 0.09, vol: 0.08, delay: 0.08 });
-    },
-    /** Новый уровень — победа игрока. */
-    levelUp: function () {
-      [523, 784, 1047, 1568].forEach(function (f, i) {
-        tone({ type: 'triangle', from: f, dur: 0.22, vol: 0.13, delay: i * 0.1 });
-      });
-    },
-    /** Шипение и взрыв крипера — поражение. */
-    explode: function () {
-      noise({ dur: 0.55, vol: 0.14, freq: 900, freqTo: 3200, type: 'bandpass', swell: true });
-      noise({ dur: 0.7, vol: 0.3, freq: 320, freqTo: 60, delay: 0.55 });
-      tone({ type: 'sine', from: 120, to: 35, dur: 0.7, vol: 0.22, delay: 0.55 });
-    },
+    setTheme: function (name) { set = SETS[name] || SETS.mc; },
+
+    place:    play('place'),
+    placeMob: play('placeMob'),
+    orb:      play('orb'),
+    levelUp:  play('levelUp'),
+    explode:  play('lose'),
+    draw:     play('draw'),
+    click:    play('click'),
+    denied:   play('denied'),
+
     /**
      * Костёр: вспышка, ровный гул на всё время горения, потрескивание
-     * и обрушение головёшек в конце.
+     * и обрушение головёшек в конце. Одинаков для обеих тем.
      */
     fire: function (ms) {
       var seconds = (ms || 3000) / 1000;
 
-      // Поджиг.
       noise({ dur: 0.6, vol: 0.24, freq: 260, freqTo: 2600, type: 'bandpass', swell: true });
       tone({ type: 'sawtooth', from: 80, to: 260, dur: 0.5, vol: 0.12 });
 
-      // Гул пламени: низкий рокот и шипящий верх, оба затухают к концу.
       noise({ dur: seconds, vol: 0.18, freq: 900, freqTo: 200, type: 'lowpass' });
       noise({ dur: seconds - 0.2, vol: 0.09, freq: 1900, freqTo: 600, type: 'bandpass', delay: 0.2 });
 
-      // Потрескивание: короткие щелчки со случайными паузами.
       for (var t = 0.12; t < seconds - 0.4; t += 0.05 + Math.random() * 0.13) {
         noise({ dur: 0.04 + Math.random() * 0.05,
                 vol: 0.08 + Math.random() * 0.09,
@@ -108,16 +165,9 @@ window.SFX = (function () {
                 type: 'bandpass', delay: t });
       }
 
-      // Блок обрушается в угли.
       tone({ type: 'sine', from: 160, to: 45, dur: 0.5, vol: 0.2, delay: seconds - 0.55 });
       noise({ dur: 0.45, vol: 0.2, freq: 500, freqTo: 90, delay: seconds - 0.55 });
     },
-    /** Ничья — нейтральный сигнал. */
-    draw: function () { tone({ type: 'sine', from: 440, to: 330, dur: 0.35, vol: 0.1 }); },
-    /** Щелчок кнопки меню. */
-    click: function () { tone({ type: 'square', from: 700, dur: 0.05, vol: 0.07 }); },
-    /** Блок уже занят. */
-    denied: function () { tone({ type: 'square', from: 150, to: 100, dur: 0.12, vol: 0.1 }); },
 
     isEnabled: function () { return enabled; },
     toggle: function () {

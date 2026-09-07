@@ -1,4 +1,4 @@
-/* Игровой контроллер: состояние партии, отрисовка поля, счёт и сценарии. */
+/* Игровой контроллер: тема оформления, состояние партии, поле, счёт. */
 (function () {
   'use strict';
 
@@ -7,47 +7,93 @@
   var BURN_MS = 3000;   // сколько горят клетки проигравшего
   var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var SIDES = {
-    X: { name: 'Стив',   short: 'Стив',   skin: '#skin-steve',   mod: 'steve'   },
-    O: { name: 'Крипер', short: 'Крипер', skin: '#skin-creeper', mod: 'creeper' }
-  };
-
-  var WIN_TEXT = {
-    X: ['Три блока в ряд — постройка завершена.',
-        'Крипер не успел подойти.',
-        'Алмазная кирка отработала смену.'],
-    O: ['Ссссс… БАБАХ. От постройки осталась воронка.',
-        'Стив забыл поставить факелы.',
-        'Мобы захватили все три блока.']
-  };
-
-  var LEVEL_HINTS = [
-    'Ставит блоки почти наугад — как крипер без цели.',
-    'Считает на пару ходов вперёд, но иногда зевает.',
-    'Просчитывает партию до конца. Обыграть нельзя, ничья — уже успех.'
-  ];
-
-  var SPLASHES = [
-    'Крипер сзади!', 'Не копай прямо вниз!', 'Осторожно, лава!',
-    '100% без модов!', 'Крафтится само!', 'Три блока в ряд!',
-    'Ночь близко…', 'Алмазы на 12 уровне!'
-  ];
+  var SCORE_KEY = 'sw-ttt-score';
+  var LEVEL_KEY = 'sw-ttt-level';
+  var THEME_KEY = 'sw-ttt-theme';
 
   var state = {
+    theme: 'mc',
     side: 'X',        // сторона игрока
     mode: 'ai',       // 'ai' | 'human'
     level: 1,
     board: new Array(9).fill(null),
-    turn: 'X',        // первым ставит блок Стив
+    turn: 'X',        // первым ходит X
     over: false,
     busy: false,      // бот «думает» — ввод заблокирован
     score: { X: 0, O: 0, D: 0 }
   };
 
-  /* ------------------------- Счёт ------------------------- */
+  function T() { return window.THEMES[state.theme]; }
 
-  var SCORE_KEY = 'sw-ttt-score';
-  var LEVEL_KEY = 'sw-ttt-level';
+  var boardEl = $('board');
+
+  /* ------------------------- Тема оформления ------------------------- */
+
+  /** Подставляет фигурку нужной темы в любой svg с <use>. */
+  function setSkin(svg, mark) {
+    if (!svg) return;
+    var theme = T();
+    svg.setAttribute('viewBox', theme.viewBox);
+    svg.setAttribute('shape-rendering', theme.crisp ? 'crispEdges' : 'auto');
+    var use = svg.querySelector('use');
+    if (use) use.setAttribute('href', theme.skins[mark]);
+  }
+
+  function applyTheme(name, silent) {
+    state.theme = window.THEMES[name] ? name : 'mc';
+    var theme = T();
+
+    document.documentElement.setAttribute('data-theme', state.theme);
+    Store.set(THEME_KEY, state.theme);
+
+    // Тексты интерфейса.
+    document.querySelectorAll('[data-t]').forEach(function (el) {
+      var value = theme.text[el.dataset.t];
+      if (value) el.textContent = value;
+    });
+
+    // Названия уровней в обеих группах чипов.
+    document.querySelectorAll('[data-level]').forEach(function (btn) {
+      btn.textContent = theme.levels[Number(btn.dataset.level)];
+    });
+    $('level-hint').textContent = theme.levelHints[state.level];
+
+    // Фигурки.
+    setSkin($('mascot'), 'X');
+    document.querySelectorAll('.side').forEach(function (btn) {
+      setSkin(btn.querySelector('.side__emblem'), btn.dataset.side);
+    });
+    setSkin(document.querySelector('#score-x .score__emblem'), 'X');
+    setSkin(document.querySelector('#score-o .score__emblem'), 'O');
+    setSkin($('overlay-emblem'), 'X');
+    retintMarks();
+
+    document.querySelectorAll('[data-theme-btn]').forEach(function (btn) {
+      var active = btn.dataset.themeBtn === state.theme;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-checked', String(active));
+    });
+
+    // Заставку удаляют после старта игры — её элементов может уже не быть.
+    var splash = $('splash');
+    if (splash) splash.textContent = theme.splashes[Math.floor(Math.random() * theme.splashes.length)];
+
+    SFX.setTheme(state.theme);
+    World.setTheme(state.theme);
+
+    renderScore();
+    if (!silent) updateStatus();
+  }
+
+  /** Меняет фигурки уже поставленных блоков, не трогая их состояние. */
+  function retintMarks() {
+    for (var i = 0; i < 9; i++) {
+      if (!state.board[i]) continue;
+      setSkin(boardEl.children[i].querySelector('.cell__mark'), state.board[i]);
+    }
+  }
+
+  /* ------------------------- Счёт ------------------------- */
 
   function loadScore() {
     try {
@@ -56,9 +102,7 @@
     } catch (e) { /* повреждённые данные просто игнорируем */ }
   }
 
-  function saveScore() {
-    Store.set(SCORE_KEY, JSON.stringify(state.score));
-  }
+  function saveScore() { Store.set(SCORE_KEY, JSON.stringify(state.score)); }
 
   function renderScore() {
     $('value-x').textContent = state.score.X;
@@ -69,7 +113,7 @@
     var botMark = state.side === 'X' ? 'O' : 'X';
     ['X', 'O'].forEach(function (mark) {
       var suffix = vsBot ? (mark === botMark ? ' (бот)' : ' (ты)') : '';
-      $('label-' + mark.toLowerCase()).textContent = SIDES[mark].short + suffix;
+      $('label-' + mark.toLowerCase()).textContent = T().sides[mark].short + suffix;
     });
   }
 
@@ -78,7 +122,6 @@
   /**
    * Уровень выбирается и в меню, и прямо в бою: обе группы чипов помечены
    * data-level, поэтому одна функция синхронизирует их разом.
-   * Смена посреди партии действует со следующего хода бота.
    */
   function setLevel(level) {
     state.level = level;
@@ -87,20 +130,18 @@
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-checked', String(active));
     });
-    $('level-hint').textContent = LEVEL_HINTS[level];
+    $('level-hint').textContent = T().levelHints[level];
     Store.set(LEVEL_KEY, String(level));
   }
 
   function loadLevel() {
-    // Number(null) === 0, поэтому пустое хранилище иначе выбрало бы «Мирный».
+    // Number(null) === 0, поэтому пустое хранилище иначе выбрало бы лёгкий уровень.
     var raw = Store.get(LEVEL_KEY);
     var saved = raw === null ? NaN : Number(raw);
     setLevel(saved === 0 || saved === 1 || saved === 2 ? saved : state.level);
   }
 
   /* ------------------------- Поле ------------------------- */
-
-  var boardEl = $('board');
 
   function buildBoard() {
     boardEl.innerHTML = '';
@@ -110,7 +151,13 @@
       cell.className = 'cell';
       cell.dataset.index = String(i);
       cell.setAttribute('role', 'gridcell');
-      cell.setAttribute('aria-label', 'Блок ' + (i + 1) + ', пусто');
+      cell.setAttribute('aria-label', 'Клетка ' + (i + 1) + ', свободна');
+      // Боковые грани блока: передняя и две боковые — нужны при повороте поля.
+      cell.innerHTML =
+        '<span class="face face--front"></span>' +
+        '<span class="face face--left"></span>' +
+        '<span class="face face--right"></span>' +
+        '<span class="mark-slot"></span>';
       cell.addEventListener('click', onCellClick);
       boardEl.appendChild(cell);
     }
@@ -118,20 +165,21 @@
 
   function renderCell(index) {
     var cell = boardEl.children[index];
+    var slot = cell.querySelector('.mark-slot');
     var mark = state.board[index];
+
     if (!mark) {
-      cell.innerHTML = '';
+      slot.innerHTML = '';
       cell.className = 'cell';
       cell.disabled = false;
-      cell.setAttribute('aria-label', 'Блок ' + (index + 1) + ', пусто');
+      cell.setAttribute('aria-label', 'Клетка ' + (index + 1) + ', свободна');
       return;
     }
-    cell.innerHTML =
-      '<svg class="cell__mark" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">' +
-      '<use href="' + SIDES[mark].skin + '"></use></svg>';
+    slot.innerHTML = '<svg class="cell__mark" aria-hidden="true"><use href=""></use></svg>';
+    setSkin(slot.querySelector('.cell__mark'), mark);
     cell.className = 'cell is-taken cell--' + mark;
     cell.disabled = true;
-    cell.setAttribute('aria-label', 'Блок ' + (index + 1) + ', занят: ' + SIDES[mark].short);
+    cell.setAttribute('aria-label', 'Клетка ' + (index + 1) + ', занята: ' + T().sides[mark].short);
   }
 
   function renderBoard() {
@@ -164,18 +212,15 @@
   function setStatus(text, mark) {
     var el = $('status');
     el.textContent = text;
-    el.className = 'status' + (mark ? ' status--' + SIDES[mark].mod : '');
+    el.className = 'status' + (mark ? ' status--' + mark.toLowerCase() : '');
   }
 
   function updateStatus() {
     if (state.over) return;
-    if (state.mode === 'ai' && state.turn !== state.side) {
-      setStatus('Бот выбирает блок…', state.turn);
-    } else if (state.mode === 'ai') {
-      setStatus('Твой ход за ' + (state.turn === 'X' ? 'Стива' : 'крипера'), state.turn);
-    } else {
-      setStatus('Ход: ' + SIDES[state.turn].name, state.turn);
-    }
+    var s = T().status;
+    if (state.mode === 'ai' && state.turn !== state.side) setStatus(s.botThinking, state.turn);
+    else if (state.mode === 'ai') setStatus(s.yourTurn[state.turn], state.turn);
+    else setStatus(s.turn + T().sides[state.turn].name, state.turn);
   }
 
   /* ------------------------- Ход ------------------------- */
@@ -227,11 +272,11 @@
       SFX.orb();
       var playerWon = state.mode === 'human' || winner === state.side;
       setTimeout(playerWon ? SFX.levelUp : SFX.explode, 320);
-      setStatus(SIDES[winner].name + ' победил!', winner);
+      setStatus(T().sides[winner].name + T().status.win, winner);
     } else {
       state.score.D++;
       SFX.draw();
-      setStatus('Ничья: мир застроен', null);
+      setStatus(T().status.draw, null);
     }
 
     saveScore();
@@ -262,19 +307,18 @@
   }
 
   function showOverlay(winner) {
-    var emblem = $('overlay-emblem').querySelector('use');
-
+    var o = T().overlay;
     if (winner) {
-      $('overlay-eyebrow').textContent = 'Достижение получено!';
-      $('overlay-title').textContent = SIDES[winner].name + ' победил!';
-      var lines = WIN_TEXT[winner];
+      $('overlay-eyebrow').textContent = o.eyebrow;
+      $('overlay-title').textContent = T().sides[winner].name + T().status.win;
+      var lines = T().winText[winner];
       $('overlay-text').textContent = lines[Math.floor(Math.random() * lines.length)];
-      emblem.setAttribute('href', SIDES[winner].skin);
+      setSkin($('overlay-emblem'), winner);
     } else {
-      $('overlay-eyebrow').textContent = 'Ничья';
-      $('overlay-title').textContent = 'Мир застроен';
-      $('overlay-text').textContent = 'Свободных блоков не осталось, а линии так и нет.';
-      emblem.setAttribute('href', '#skin-steve');
+      $('overlay-eyebrow').textContent = o.drawEyebrow;
+      $('overlay-title').textContent = o.drawTitle;
+      $('overlay-text').textContent = o.drawText;
+      setSkin($('overlay-emblem'), 'X');
     }
     $('overlay').hidden = false;
     $('overlay-again').focus();
@@ -344,9 +388,16 @@
         setLevel(Number(btn.dataset.level));
         SFX.click();
         if (!$('game').hidden && !state.over) {
-          setStatus('Сложность: ' + AI.levelName(state.level), null);
+          setStatus('Сложность: ' + T().levels[state.level], null);
           setTimeout(updateStatus, 1400);
         }
+      });
+    });
+
+    document.querySelectorAll('[data-theme-btn]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        applyTheme(btn.dataset.themeBtn);
+        SFX.click();
       });
     });
   }
@@ -357,6 +408,7 @@
     $('start-game').addEventListener('click', function () { SFX.click(); startGame(); });
     $('restart').addEventListener('click', function () { SFX.click(); newRound(); });
     $('back').addEventListener('click', function () { SFX.click(); showSetup(); });
+    $('reset-view').addEventListener('click', function () { SFX.click(); Orbit.reset(); });
     $('reset-score').addEventListener('click', function () {
       state.score = { X: 0, O: 0, D: 0 };
       saveScore();
@@ -365,6 +417,11 @@
     });
     $('overlay-again').addEventListener('click', function () { SFX.click(); newRound(); });
     $('overlay-menu').addEventListener('click', function () { SFX.click(); showSetup(); });
+
+    $('theme-toggle').addEventListener('click', function () {
+      applyTheme(state.theme === 'mc' ? 'kitty' : 'mc');
+      SFX.click();
+    });
 
     var sound = $('sound-toggle');
     sound.setAttribute('aria-pressed', String(SFX.isEnabled()));
@@ -382,7 +439,7 @@
     });
   }
 
-  /* ------------------------- Главное меню ------------------------- */
+  /* ------------------------- Заставка ------------------------- */
 
   function enterWorld() {
     var menu = $('intro');
@@ -396,7 +453,6 @@
   function bindMenu() {
     var menu = $('intro');
     if (!menu) { $('app').hidden = false; return; }
-    $('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
     $('enter-world').addEventListener('click', enterWorld);
     document.addEventListener('keydown', function (e) {
       if (!$('intro') || $('intro').classList.contains('is-leaving')) return;
@@ -407,10 +463,12 @@
   /* ------------------------- Старт ------------------------- */
 
   bindMenu();          // первым делом — чтобы кнопка «Начать игру» жила всегда
+  buildBoard();
+  World.init($('world'), Store.get(THEME_KEY) === 'kitty' ? 'kitty' : 'mc');
+  Orbit.attach($('board-wrap'));
   loadScore();
   loadLevel();
-  buildBoard();
   bindSetup();
   bindControls();
-  renderScore();
+  applyTheme(Store.get(THEME_KEY) || 'mc', true);
 })();
