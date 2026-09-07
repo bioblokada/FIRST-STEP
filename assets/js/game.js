@@ -51,13 +51,13 @@
 
   function loadScore() {
     try {
-      var raw = JSON.parse(localStorage.getItem(SCORE_KEY));
+      var raw = JSON.parse(Store.get(SCORE_KEY));
       if (raw && typeof raw.X === 'number') state.score = raw;
     } catch (e) { /* повреждённые данные просто игнорируем */ }
   }
 
   function saveScore() {
-    try { localStorage.setItem(SCORE_KEY, JSON.stringify(state.score)); } catch (e) {}
+    Store.set(SCORE_KEY, JSON.stringify(state.score));
   }
 
   function renderScore() {
@@ -88,12 +88,12 @@
       btn.setAttribute('aria-checked', String(active));
     });
     $('level-hint').textContent = LEVEL_HINTS[level];
-    try { localStorage.setItem(LEVEL_KEY, String(level)); } catch (e) {}
+    Store.set(LEVEL_KEY, String(level));
   }
 
   function loadLevel() {
     // Number(null) === 0, поэтому пустое хранилище иначе выбрало бы «Мирный».
-    var raw = localStorage.getItem(LEVEL_KEY);
+    var raw = Store.get(LEVEL_KEY);
     var saved = raw === null ? NaN : Number(raw);
     setLevel(saved === 0 || saved === 1 || saved === 2 ? saved : state.level);
   }
@@ -406,11 +406,11 @@
 
   /* ------------------------- Старт ------------------------- */
 
+  bindMenu();          // первым делом — чтобы кнопка «Начать игру» жила всегда
   loadScore();
   loadLevel();
   buildBoard();
   bindSetup();
   bindControls();
-  bindMenu();
   renderScore();
 })();

@@ -3,7 +3,7 @@ window.SFX = (function () {
   'use strict';
 
   var ctx = null;
-  var enabled = localStorage.getItem('sw-ttt-sound') !== 'off';
+  var enabled = Store.get('sw-ttt-sound') !== 'off';
 
   function ac() {
     if (!ctx) {
@@ -122,7 +122,7 @@ window.SFX = (function () {
     isEnabled: function () { return enabled; },
     toggle: function () {
       enabled = !enabled;
-      localStorage.setItem('sw-ttt-sound', enabled ? 'on' : 'off');
+      Store.set('sw-ttt-sound', enabled ? 'on' : 'off');
       if (enabled) { ac(); this.click(); }
       return enabled;
     }
