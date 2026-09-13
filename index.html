@@ -210,7 +210,7 @@
   <section class="info">
     <div>
       <h3>Как играть</h3>
-      <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 30 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа.</p>
+      <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 10 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа.</p>
       <p>Клавиши: <kbd>Q</kbd> и <kbd>Z</kbd> — левые лотки, <kbd>O</kbd> и <kbd>M</kbd> — правые (или стрелки: <kbd>←</kbd> <kbd>↓</kbd> слева, <kbd>↑</kbd> <kbd>→</kbd> справа). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне просто нажимай на четверти экрана или на круглые кнопки.</p>
       <p>Фото лиц лежат в папке <code>photos/</code>: <code>2-1.jpg, 2-2.jpg…</code> Мусюня, <code>3-*.jpg</code> Тася, <code>4-*.jpg</code> Полина, <code>5-*.jpg</code> Мирон. Лицо меняется при промахе, новом уровне и каждые десять пойманных. Папа всегда волк.</p>
     </div>
@@ -235,7 +235,7 @@ const DEFAULTS = [
     wave:'sine', pitch:1.25,
     start:'Дети, ко мне!', streak:['Все дома!','Мама всех поймает!','Ни один не потерялся!'], miss:['Ой, ребёнок!','Куда побежал?!'],
     over:['Ну, детки, погодите!','Собираем заново?'] },
-  { id:3, name:'Тася', role:'15 лет', color:'#8a5cd6', items:['📱'], splat:'💥', f:true, tool:'bag',
+  { id:3, name:'Тася', role:'15 лет', color:'#8a5cd6', items:['phone'], splat:'💥', f:true, tool:'bag',
     wave:'triangle', pitch:1.5,
     start:'Телефоны летят!', streak:['Экран целый!','Новый айфон!','Селфи на память!'], miss:['Экран треснул!','Разбила…'],
     over:['Ну, погоди!','Айфон не вернуть…'] },
@@ -332,7 +332,7 @@ function renderRecords(){
   }
 }
 const TOOLS = { basket:'корзиной', racket:'ракеткой', stroller:'коляской', bag:'сумкой', gamepad:'геймпадом' };
-const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i==='egg' ? '🥚' : i.startsWith('photo:') ? '🧒' : i).join('');
+const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i==='egg' ? '🥚' : i==='phone' ? '📱' : i.startsWith('photo:') ? '🧒' : i).join('');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* переименование */
@@ -418,11 +418,11 @@ const G = {
   flash:0, headTilt:0,
 };
 
-const LEVEL_STEP = 30; // очков на уровень
+const LEVEL_STEP = 10; // очков на уровень
 const levelFor = score => Math.floor(score / LEVEL_STEP) + 1;
 function periodFor(score){
   const base = mode==='A' ? 950 : 700, min = mode==='A' ? 260 : 200;
-  return Math.max(min, base * Math.pow(0.88, levelFor(score) - 1));
+  return Math.max(min, base * Math.pow(0.93, levelFor(score) - 1));
 }
 
 function startGame(){
@@ -483,8 +483,8 @@ function setBasket(pos){
 
 function trySpawn(){
   const lvl = levelFor(G.score);
-  const baseP = (mode==='A' ? 0.30 : 0.42) + Math.min(0.3, (lvl - 1) * 0.03);
-  const maxE = (mode==='A' ? 2 : 3) + (lvl > 4 ? 1 : 0) + (lvl > 10 ? 1 : 0);
+  const baseP = (mode==='A' ? 0.30 : 0.42) + Math.min(0.3, (lvl - 1) * 0.015);
+  const maxE = (mode==='A' ? 2 : 3) + (lvl > 8 ? 1 : 0) + (lvl > 20 ? 1 : 0);
   if (G.eggs.length >= maxE) return;
   if (Math.random() > baseP) return;
   const free = [0,1,2,3].filter(c => !G.eggs.some(e => e.chute===c && e.step < 2));
@@ -580,7 +580,15 @@ function drawChutes(){
 
 function drawItem(x, y, text, size, alpha){
   ctx.save(); ctx.globalAlpha = alpha;
-  if (text === 'egg'){
+  if (text === 'phone'){
+    const w = size * 0.56, h = size * 0.98;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.25);
+    rr(-w/2, -h/2, w, h, size * 0.12); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = seg(0.95); ctx.stroke();
+    rr(-w/2 + 3, -h/2 + 5, w - 6, h - 12, 3); ctx.fillStyle = cur().color; ctx.fill();          // экран в цвете игрока
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(-w/2 + 6, -h/2 + 9, w - 12, 3); ctx.fillRect(-w/2 + 6, -h/2 + 15, w * 0.5, 3); // «иконки»
+    ctx.fillStyle = seg(0.95); ctx.beginPath(); ctx.arc(0, h/2 - 4, 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  } else if (text === 'egg'){
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35);
     ctx.beginPath(); ctx.ellipse(0, 0, size * 0.34, size * 0.44, 0, 0, Math.PI*2);
     ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = seg(0.95); ctx.stroke();
@@ -608,7 +616,7 @@ function drawItem(x, y, text, size, alpha){
 }
 
 function drawRolling(x, y, item){
-  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' ? 36 : 32, 1);
+  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' ? 36 : 32, 1);
 }
 
 function drawWolf(now){
@@ -626,15 +634,26 @@ function drawWolf(now){
     ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx, sy + 34); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
   } else {
-    // человек: шея, футболка в цвете игрока, брюки, обувь, руки
+    // человек: шея, потом платье для девочек или футболка с брюками
     ctx.fillRect(310, 190, 20, 14);                                          // шея
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.moveTo(284, 204); ctx.lineTo(356, 204); ctx.lineTo(372, 232); ctx.lineTo(356, 240); ctx.lineTo(354, 292);
-    ctx.lineTo(286, 292); ctx.lineTo(284, 240); ctx.lineTo(268, 232); ctx.closePath(); ctx.fill();   // футболка с рукавами
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(292, 284, 56, 4);                          // кромка
-    ctx.fillStyle = seg(0.95);
-    rr(288, 290, 30, 50, 6); ctx.fill(); rr(322, 290, 30, 50, 6); ctx.fill();                        // брюки
-    rr(282, 336, 38, 12, 6); ctx.fill(); rr(320, 336, 38, 12, 6); ctx.fill();                        // обувь
+    if (p.f){
+      ctx.beginPath(); ctx.moveTo(284, 204); ctx.lineTo(356, 204); ctx.lineTo(372, 232); ctx.lineTo(356, 240); // лиф с рукавами
+      ctx.lineTo(362, 262); ctx.lineTo(384, 322); ctx.lineTo(256, 322); ctx.lineTo(278, 262);               // расклёшенная юбка
+      ctx.lineTo(284, 240); ctx.lineTo(268, 232); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(282, 258, 76, 4);                              // пояс
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      for (let x = 276; x <= 364; x += 22){ ctx.beginPath(); ctx.moveTo(x + 8, 266); ctx.lineTo(x, 318); ctx.lineTo(x + 4, 318); ctx.lineTo(x + 11, 266); ctx.fill(); } // складки
+      ctx.fillStyle = '#e9c9a8'; rr(292, 318, 20, 24, 5); ctx.fill(); rr(328, 318, 20, 24, 5); ctx.fill();   // ноги
+      ctx.fillStyle = seg(0.95); rr(284, 336, 34, 12, 6); ctx.fill(); rr(322, 336, 34, 12, 6); ctx.fill();   // туфли
+    } else {
+      ctx.beginPath(); ctx.moveTo(284, 204); ctx.lineTo(356, 204); ctx.lineTo(372, 232); ctx.lineTo(356, 240); ctx.lineTo(354, 292);
+      ctx.lineTo(286, 292); ctx.lineTo(284, 240); ctx.lineTo(268, 232); ctx.closePath(); ctx.fill();   // футболка с рукавами
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(292, 284, 56, 4);                          // кромка
+      ctx.fillStyle = seg(0.95);
+      rr(288, 290, 30, 50, 6); ctx.fill(); rr(322, 290, 30, 50, 6); ctx.fill();                        // брюки
+      rr(282, 336, 38, 12, 6); ctx.fill(); rr(320, 336, 38, 12, 6); ctx.fill();                        // обувь
+    }
     ctx.lineWidth = 13; ctx.strokeStyle = '#e9c9a8';                                                  // руки
     ctx.beginPath(); ctx.moveTo(left ? 276 : 364, 236); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(left ? 364 : 276, 236); ctx.lineTo(left ? 350 : 290, 300); ctx.stroke();
@@ -737,8 +756,14 @@ function drawHUD(){
   // счёт
   drawNumber(272, 12, 34, G.score, 3);
   // промахи
-  const p = cur();
-  for (let i = 0; i < 3; i++) drawItem(560 + i * 30, 30, p.splat, 22, i < G.misses ? 1 : 0.12);
+  for (let i = 0; i < 3; i++){
+    const x = 560 + i * 30, lit = i < G.misses;
+    ctx.beginPath(); ctx.arc(x, 30, 11, 0, Math.PI*2);
+    ctx.fillStyle = lit ? '#c8402f' : 'rgba(35,38,31,0.12)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = lit ? '#7a2017' : seg(0.35); ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = lit ? '#ffffff' : seg(0.3);
+    ctx.beginPath(); ctx.moveTo(x - 5, 25); ctx.lineTo(x + 5, 35); ctx.moveTo(x + 5, 25); ctx.lineTo(x - 5, 35); ctx.stroke();
+  }
 }
 
 function drawBackdrop(){
