@@ -167,9 +167,24 @@
   td .dot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:middle}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
   @media (pointer: coarse), (max-width: 700px){ .desk-only{display:none} }
+  .rotate{
+    position:fixed; inset:0; z-index:20; background:rgba(27,32,39,.96); color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px;
+  }
+  .rotate[hidden]{display:none}
+  .rotate .big{font-family:"Rubik Mono One", Rubik, sans-serif; font-size:clamp(26px,8vw,40px); line-height:1.15; text-wrap:balance; max-width:12ch}
+  .rotate .small{font-size:15px; color:var(--ink-dim); max-width:32ch}
+  .rotate .phone{
+    width:56px; height:96px; border:4px solid var(--ink); border-radius:12px; position:relative;
+    animation:turn 1.6s ease-in-out infinite alternate;
+  }
+  .rotate .phone::after{content:''; position:absolute; left:50%; bottom:6px; width:18px; height:4px; margin-left:-9px; background:var(--ink); border-radius:2px}
+  @keyframes turn{ from{transform:rotate(0)} to{transform:rotate(-90deg)} }
+  @media (prefers-reduced-motion: reduce){ .rotate .phone{animation:none; transform:rotate(-90deg)} }
   /* ---------- полноэкранный режим на телефоне ---------- */
   .kbtn.exit{background:linear-gradient(180deg,#e6e0d0,#bfb7a4)}
-  body.play{overflow:hidden; padding:0; height:100vh; height:100dvh}
+  body.play{overflow:hidden; padding:0; height:100vh; height:100dvh; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
+  .device, .device *{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
   body.play .wrap > :not(.device){display:none}
   body.play .device{
     position:fixed; inset:0; z-index:10; border-radius:0; box-shadow:none;
@@ -213,6 +228,12 @@
     <span id="renameBox" hidden><input type="text" id="renameInput" maxlength="16" aria-label="Новое имя"> <button class="tbtn" id="btnRenameOk" type="button">Готово</button></span>
   </div>
 
+  <div class="rotate" id="rotateHint" hidden>
+    <div class="phone"></div>
+    <div class="big">Поверни телефон горизонтально</div>
+    <div class="small">Так экран игры будет больше, а кнопки под большими пальцами</div>
+    <button type="button" class="cbtn ghost" id="rotateSkip">Играть так</button>
+  </div>
   <div class="device" id="device">
     <div class="brand"><span>ЭЛЕКТРОНИКА</span><span class="stripe" id="brandStripe">ИМ-02 · семейная</span></div>
     <div class="lcd-frame">
@@ -281,7 +302,7 @@ const DEFAULTS = [
   { id:5, name:'Мирон', role:'9 лет', color:'#5aa040', items:['creeper','zombie','diamond','pig','tnt'], splat:'💣', boom:true, tool:'gamepad',
     wave:'square', pitch:1.3,
     start:'Крипер идёт!', streak:['Алмаз!','GG!','Крафт удался!'], miss:['Бабах!','Крипер взорвался!'],
-    over:['Ну, крипер, погоди!','Респавн?'] },
+    over:['Ну, крипер, погоди!','Ещё раунд, Мирон?'] },
 ];
 
 const LS = {
@@ -404,8 +425,11 @@ function unlockAudio(){
 }
 ['touchstart','touchend','pointerdown','click','keydown'].forEach(t => document.addEventListener(t, unlockAudio, true));
 document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && AC.state === 'suspended') AC.resume().catch(() => {}); });
+let lastPlay = 0, playBurst = 0;
 function play(notes, opts = {}){
   if (!soundOn) return; const ac = audio(); if (!ac) return;
+  const nowMs = performance.now(); playBurst = nowMs - lastPlay < 120 ? playBurst + 1 : 0; lastPlay = nowMs;
+  if (playBurst > 3) return;                                                           // защита от «воя» при пачке звуков
   const p = cur(); const step = opts.step || 0.09, vol = opts.vol || 0.12, wave = opts.wave || p.wave;
   let t = ac.currentTime + 0.01;
   for (const f of notes){
@@ -494,13 +518,26 @@ function enterPlay(){
   const el = document.documentElement;
   try { if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); } catch (e) {}
   window.scrollTo(0, 0); setTimeout(resize, 50); setTimeout(resize, 400);
+  setTimeout(updateRotateHint, 60);
 }
 function exitPlay(){
-  document.body.classList.remove('play'); $('#btnExit').hidden = true;
+  document.body.classList.remove('play'); $('#btnExit').hidden = true; $('#rotateHint').hidden = true;
   try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) {}
   setTimeout(resize, 50);
 }
 $('#btnExit').addEventListener('click', () => { if (G.running && !G.paused) pauseToggle(); exitPlay(); });
+
+// подсказка «поверни телефон»: в режиме игры при вертикальном экране
+const portraitMq = window.matchMedia('(orientation: portrait)');
+let rotateSkipped = false;
+function updateRotateHint(){
+  const show = document.body.classList.contains('play') && portraitMq.matches && !rotateSkipped && mobileLike();
+  const hint = $('#rotateHint');
+  if (show && hint.hidden){ hint.hidden = false; if (G.running && !G.paused) pauseToggle(); }
+  else if (!show && !hint.hidden){ hint.hidden = true; if (G.running && G.paused) pauseToggle(); }
+}
+$('#rotateSkip').addEventListener('click', () => { rotateSkipped = true; updateRotateHint(); });
+portraitMq.addEventListener('change', () => setTimeout(updateRotateHint, 150));
 window.addEventListener('orientationchange', () => { setTimeout(resize, 100); setTimeout(resize, 500); });
 
 function startGame(){
@@ -1009,7 +1046,8 @@ function draw(now){
 
 function frame(now){
   if (G.running && !G.paused){
-    while (now - G.lastTick >= G.period){ G.lastTick += G.period; tick(now); if (!G.running) break; }
+    if (now - G.lastTick > G.period * 2.5){ G.lastTick = now - G.period * 0.5; }   // браузер притормозил: не догоняем, продолжаем с этого места
+    else if (now - G.lastTick >= G.period){ G.lastTick += G.period; tick(now); }   // не больше одного шага за кадр
   }
   draw(now);
   requestAnimationFrame(frame);
@@ -1041,6 +1079,7 @@ $('#btnStart').addEventListener('click', () => { if (!G.running) startGame(); el
 $('#modeA').addEventListener('click', () => { if (G.running && !G.paused) return; mode = 'A'; LS.set('np_mode', mode); if (!G.running) showIdle(); else applyTheme(); });
 $('#modeB').addEventListener('click', () => { if (G.running && !G.paused) return; mode = 'B'; LS.set('np_mode', mode); if (!G.running) showIdle(); else applyTheme(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) pauseToggle(); });
+window.addEventListener('pagehide', () => { if (G.running && !G.paused) pauseToggle(); });
 
 /* ================= запуск ================= */
 renderPlayers(); showIdle(); resize();
