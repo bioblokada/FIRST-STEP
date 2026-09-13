@@ -172,7 +172,7 @@
   <div class="toolbar" id="toolbar">
     <span>Игрок: <span class="who" id="whoName">…</span></span>
     <button class="tbtn" id="btnRename" type="button">Переименовать</button>
-    <label class="tbtn" for="photoInput">Загрузить фото</label>
+    <label class="tbtn" for="photoInput" id="photoLabel">Загрузить фото</label>
     <input type="file" id="photoInput" accept="image/*" class="sr">
     <button class="tbtn" id="btnClearPhoto" type="button" hidden>Убрать фото</button>
     <span id="renameBox" hidden><input type="text" id="renameInput" maxlength="16" aria-label="Новое имя"> <button class="tbtn" id="btnRenameOk" type="button">Готово</button></span>
@@ -230,7 +230,7 @@ const DEFAULTS = [
     wave:'square', pitch:1.0,
     start:'Ну, погоди!', streak:['Заяц, ну погоди!','Волк в ударе!','Как в детстве!'], miss:['Яичница!','Эх, волк…'],
     over:['Ну, заяц, погоди!','Ещё партию?'] },
-  { id:2, name:'Мусюня', role:'мама', color:'#d9486e', items:['👶','🧒','👧'], splat:'😭', f:true, tool:'stroller',
+  { id:2, name:'Мусюня', role:'мама', color:'#d9486e', items:['photo:3','photo:4','photo:5'], splat:'😭', f:true, tool:'stroller',
     wave:'sine', pitch:1.25,
     start:'Дети, ко мне!', streak:['Все дома!','Мама всех поймает!','Ни один не потерялся!'], miss:['Ой, ребёнок!','Куда побежал?!'],
     over:['Ну, детки, погодите!','Собираем заново?'] },
@@ -242,7 +242,7 @@ const DEFAULTS = [
     wave:'sine', pitch:0.9,
     start:'Подача!', streak:['Отбила!','Смэш!','Виннер!'], miss:['Аут!','В сетку!'],
     over:['Гейм, сет, матч!','Реванш?'] },
-  { id:5, name:'Мирон', role:'9 лет', color:'#5aa040', items:['creeper','🧟','💎','🐷','🧨'], splat:'💥', tool:'gamepad',
+  { id:5, name:'Мирон', role:'9 лет', color:'#5aa040', items:['creeper','🧟','💎','🐷','🧨'], splat:'💣', boom:true, tool:'gamepad',
     wave:'square', pitch:1.3,
     start:'Крипер идёт!', streak:['Алмаз!','GG!','Крафт удался!'], miss:['Бабах!','Крипер взорвался!'],
     over:['Ну, крипер, погоди!','Респавн?'] },
@@ -307,7 +307,8 @@ function applyTheme(){
   const p = cur();
   document.documentElement.style.setProperty('--accent', p.color);
   whoName.textContent = p.name;
-  $('#btnClearPhoto').hidden = !p.localImg;
+  $('#btnClearPhoto').hidden = !p.localImg || !!p.wolf;
+  $('#photoLabel').hidden = !!p.wolf;
   $('#modeA').classList.toggle('on', mode==='A');
   $('#modeB').classList.toggle('on', mode==='B');
   $('#brandStripe').textContent = 'ИМ-02 · ' + p.name.toLowerCase();
@@ -320,7 +321,8 @@ function renderPlayers(){
     b.type = 'button'; b.className = 'chip' + (i===curIdx ? ' on' : ''); b.style.setProperty('--accent', p.color);
     b.setAttribute('aria-pressed', i===curIdx);
     const av = document.createElement('span'); av.className = 'avatar';
-    if (p.img){ const im = document.createElement('img'); im.src = p.img.src; im.alt = ''; av.appendChild(im); }
+    if (p.wolf) av.textContent = '🐺';
+    else if (p.img){ const im = document.createElement('img'); im.src = p.img.src; im.alt = ''; av.appendChild(im); }
     else av.textContent = p.name.slice(0,1).toUpperCase();
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = p.name; nm.title = p.role;
     const it = document.createElement('span'); it.className = 'it'; it.textContent = itemLabel(p);
@@ -342,7 +344,7 @@ function renderRecords(){
   }
 }
 const TOOLS = { basket:'корзиной', racket:'ракеткой', stroller:'коляской', bag:'сумкой', gamepad:'геймпадом' };
-const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i).join('');
+const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i.startsWith('photo:') ? '🧒' : i).join('');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* переименование */
@@ -383,10 +385,19 @@ function play(notes, opts = {}){
     t += step;
   }
 }
+function boom(){
+  if (!soundOn) return; const ac = audio(); if (!ac) return;
+  const n = ac.sampleRate * 0.5, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.2);
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1800, ac.currentTime); f.frequency.exponentialRampToValueAtTime(120, ac.currentTime + 0.45);
+  const g = ac.createGain(); g.gain.value = 0.35;
+  src.connect(f).connect(g).connect(ac.destination); src.start();
+}
 const SFX = {
   move:  () => play([520], {step:0.05, vol:0.05, wave:'square'}),
   catch: () => play([880, 1320], {step:0.06}),
-  miss:  () => play([240, 180, 120], {step:0.14, vol:0.14}),
+  miss:  () => cur().boom ? boom() : play([240, 180, 120], {step:0.14, vol:0.14}),
   bonus: () => play([660, 880, 1100, 1320], {step:0.08}),
   start: () => play([523, 659, 784, 1047], {step:0.1}),
   over:  () => play([440, 415, 392, 370, 0, 349, 0, 330], {step:0.16, vol:0.14}),
@@ -576,7 +587,14 @@ function drawChutes(){
 
 function drawItem(x, y, text, size, alpha){
   ctx.save(); ctx.globalAlpha = alpha;
-  if (text === 'creeper'){
+  if (text.startsWith('photo:')){
+    const q = P[+text.slice(6) - 1], r = size / 2;
+    ctx.beginPath(); ctx.arc(x, y, r + 2, 0, Math.PI*2); ctx.fillStyle = seg(0.95); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.clip();
+    if (q.img){ const m = Math.min(q.img.width, q.img.height); ctx.drawImage(q.img, (q.img.width-m)/2, (q.img.height-m)/2, m, m, x - r, y - r, size, size); }
+    else { ctx.fillStyle = q.color; ctx.fillRect(x - r, y - r, size, size); ctx.fillStyle = '#fff'; ctx.font = `700 ${size*0.6}px Rubik, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(q.name.slice(0,1).toUpperCase(), x, y + 1); }
+    ctx.restore();
+  } else if (text === 'creeper'){
     const u = size / 8, o = -size / 2; ctx.fillStyle = '#4caf3c'; ctx.fillRect(x + o, y + o, size, size);
     ctx.fillStyle = '#2f7a26';
     [[0,0],[3,0],[6,1],[1,2],[5,3],[2,6],[7,5],[0,7],[4,7]].forEach(([a,b]) => ctx.fillRect(x + o + a*u, y + o + b*u, u, u));
@@ -615,13 +633,13 @@ function drawWolf(now){
   ctx.beginPath(); ctx.moveTo(36, -22); ctx.lineTo(30, -62); ctx.lineTo(6, -38); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.arc(0, 0, headR + 4, 0, Math.PI*2); ctx.fill();
   ctx.save(); ctx.beginPath(); ctx.arc(0, 0, headR, 0, Math.PI*2); ctx.clip();
-  if (p.img){
+  if (p.wolf){
+    drawWolfFace(left, headR);
+  } else if (p.img){
     ctx.save(); if (left) ctx.scale(-1, 1);
     const m = Math.min(p.img.width, p.img.height);
     ctx.drawImage(p.img, (p.img.width-m)/2, (p.img.height-m)/2, m, m, -headR, -headR, headR*2, headR*2);
     ctx.restore();
-  } else if (p.wolf){
-    drawWolfFace(left, headR);
   } else {
     ctx.fillStyle = p.color; ctx.fillRect(-headR, -headR, headR*2, headR*2);
     ctx.fillStyle = '#fff'; ctx.font = '700 40px "Rubik Mono One", Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -725,7 +743,11 @@ function draw(now){
     drawItem(a.x + (b.x - a.x) * t, a.y + (b.y - 40 - a.y) * t - Math.sin(t * Math.PI) * 70, r.item, 22, 1 - t * 0.6);
   }
   drawWolf(now);
-  if (G.broken && G.broken.until > now){ drawItem(G.broken.side ? 470 : 170, 380, p.splat, 30, 1); }
+  if (G.broken && G.broken.until > now){
+    const bx = G.broken.side ? 470 : 170;
+    if (p.boom){ const k = Math.min(1, (now - (G.broken.until - 1500)) / 250); drawItem(bx - 16, 380, '💣', 26, 1); drawItem(bx + 18, 372, '💥', 26 + 18 * k, 1); }
+    else drawItem(bx, 380, p.splat, 30, 1);
+  }
   if (G.bubble && G.bubble.until > now){
     ctx.font = '700 15px Rubik, sans-serif'; const tw = ctx.measureText(G.bubble.text).width + 24;
     const bx = 320 - tw/2, by = 70;
