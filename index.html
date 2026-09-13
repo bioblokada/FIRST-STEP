@@ -2,7 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ну, погоди!">
+<meta name="theme-color" content="#1b2027">
 <title>Ну, погоди! Семейная</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Rubik:wght@400;500;700&display=swap">
@@ -161,6 +166,35 @@
   td.num{text-align:right; color:var(--ink)}
   td .dot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:middle}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+  @media (pointer: coarse), (max-width: 700px){ .desk-only{display:none} }
+  /* ---------- полноэкранный режим на телефоне ---------- */
+  .kbtn.exit{background:linear-gradient(180deg,#e6e0d0,#bfb7a4)}
+  body.play{overflow:hidden; padding:0; height:100vh; height:100dvh}
+  body.play .wrap > :not(.device){display:none}
+  body.play .device{
+    position:fixed; inset:0; z-index:10; border-radius:0; box-shadow:none;
+    padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    display:flex; flex-direction:column; gap:8px; overflow:hidden;
+  }
+  body.play .brand{padding:0 4px 2px; font-size:13px}
+  body.play .lcd-frame{width:min(100%, calc((100dvh - 150px) * 1.6)); margin:0 auto; padding:6px; border-radius:10px}
+  body.play .controls{flex:1; padding:6px 0 0; align-content:center; gap:8px}
+  @media (orientation: portrait){ body.play .controls{align-content:end; padding-bottom:18px} }
+  body.play .pad{gap:14px}
+  body.play .pad button{width:78px; height:78px; font-size:28px}
+  body.play .mid{gap:6px}
+  body.play .mid .modes{display:none}
+  body.play #btnStart{display:none}
+  @media (orientation: landscape){
+    body.play .device{flex-direction:row; align-items:center; gap:10px}
+    body.play .brand{display:none}
+    body.play .lcd-frame{flex:0 1 auto; width:min(calc(100vw - 210px), calc((100dvh - 30px) * 1.6)); margin:0}
+    body.play .controls{flex:0 0 auto; display:contents}
+    body.play .pad{order:0; flex-direction:column; justify-content:center; height:100%}
+    body.play .pad.left{order:-1} body.play .pad.right{order:1}
+    body.play .mid{position:fixed; right:calc(10px + env(safe-area-inset-right)); top:calc(8px + env(safe-area-inset-top)); flex-direction:row}
+    body.play .pad button{width:70px; height:70px}
+  }
   @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 </style>
 </head>
@@ -199,6 +233,7 @@
         </div>
         <button type="button" class="kbtn start" id="btnStart">Старт</button>
         <button type="button" class="kbtn" id="btnSound" aria-pressed="true">Звук: вкл</button>
+        <button type="button" class="kbtn exit" id="btnExit" hidden>Выход</button>
       </div>
       <div class="pad right">
         <button type="button" data-pos="2" aria-label="Правый верхний лоток">↗<small>O</small></button>
@@ -211,8 +246,8 @@
     <div>
       <h3>Как играть</h3>
       <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 10 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа. Иногда по лотку катится бомба с горящим фитилём: её ловить нельзя, поймаешь — всё взорвётся. Пусть падает мимо, за неё промах не считается.</p>
-      <p>Клавиши: <kbd>Q</kbd> и <kbd>Z</kbd> — левые лотки, <kbd>O</kbd> и <kbd>M</kbd> — правые (или стрелки: <kbd>←</kbd> <kbd>↓</kbd> слева, <kbd>↑</kbd> <kbd>→</kbd> справа). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне просто нажимай на четверти экрана или на круглые кнопки.</p>
-      <p>Фото лиц лежат в папке <code>photos/</code>: <code>2-1.jpg, 2-2.jpg…</code> Мусюня, <code>3-*.jpg</code> Тася, <code>4-*.jpg</code> Полина, <code>5-*.jpg</code> Мирон. Лицо меняется при промахе, новом уровне и каждые десять пойманных. Папа всегда волк.</p>
+      <p class="desk-only">Клавиши: <kbd>Q</kbd> и <kbd>Z</kbd> — левые лотки, <kbd>O</kbd> и <kbd>M</kbd> — правые (или стрелки: <kbd>←</kbd> <kbd>↓</kbd> слева, <kbd>↑</kbd> <kbd>→</kbd> справа). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне игра при старте разворачивается на весь экран: нажимай на четверти экрана или на круглые кнопки, кнопка «Выход» возвращает к списку игроков. Чтобы играть без адресной строки, добавь страницу на экран «Домой».</p>
+      <p class="desk-only">Фото лиц лежат в папке <code>photos/</code>: <code>2-1.jpg, 2-2.jpg…</code> Мусюня, <code>3-*.jpg</code> Тася, <code>4-*.jpg</code> Полина, <code>5-*.jpg</code> Мирон. Лицо меняется при промахе, новом уровне и каждые десять пойманных. Папа всегда волк.</p>
     </div>
     <div>
       <h3>Рекорды</h3>
@@ -352,10 +387,23 @@ $('#renameInput').addEventListener('keydown', e => { if (e.key==='Enter') commit
 /* ================= звук ================= */
 let AC = null;
 function audio(){
-  if (!AC){ const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; AC = new C(); }
-  if (AC.state === 'suspended') AC.resume();
+  if (!AC){
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}   // iPhone: звук даже при выключенном переключателе
+    AC = new C();
+  }
+  if (AC.state === 'suspended') AC.resume().catch(() => {});
   return AC;
 }
+// iPhone и Android разрешают звук только после касания: разблокируем при первом же тапе
+function unlockAudio(){
+  const ac = audio(); if (!ac) return;
+  ac.resume().catch(() => {});
+  try { const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0); } catch (e) {}
+  if (ac.state === 'running'){ ['touchstart','touchend','pointerdown','click','keydown'].forEach(t => document.removeEventListener(t, unlockAudio, true)); }
+}
+['touchstart','touchend','pointerdown','click','keydown'].forEach(t => document.addEventListener(t, unlockAudio, true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && AC.state === 'suspended') AC.resume().catch(() => {}); });
 function play(notes, opts = {}){
   if (!soundOn) return; const ac = audio(); if (!ac) return;
   const p = cur(); const step = opts.step || 0.09, vol = opts.vol || 0.12, wave = opts.wave || p.wave;
@@ -439,7 +487,24 @@ function periodFor(score){
   return Math.max(260, 950 * Math.pow(0.93, lvl - 1));
 }
 
+const mobileLike = () => window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900;
+function enterPlay(){
+  if (document.body.classList.contains('play')) return;
+  document.body.classList.add('play'); $('#btnExit').hidden = false;
+  const el = document.documentElement;
+  try { if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); } catch (e) {}
+  window.scrollTo(0, 0); setTimeout(resize, 50); setTimeout(resize, 400);
+}
+function exitPlay(){
+  document.body.classList.remove('play'); $('#btnExit').hidden = true;
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) {}
+  setTimeout(resize, 50);
+}
+$('#btnExit').addEventListener('click', () => { if (G.running && !G.paused) pauseToggle(); exitPlay(); });
+window.addEventListener('orientationchange', () => { setTimeout(resize, 100); setTimeout(resize, 500); });
+
 function startGame(){
+  if (mobileLike()) enterPlay();
   G.running = true; G.paused = false; G.over = false; G.score = 0; G.misses = 0; G.basket = 0;
   G.eggs = []; G.returns = []; G.broken = null; G.fizzle = null; G.exploding = null; G.streak = 0; G.forgiven = {}; G.flash = 0;
   G.period = periodFor(0); G.lastTick = performance.now() + 500;
@@ -464,7 +529,7 @@ function endGame(win, reason){
   </div>`;
   overlay.hidden = false;
   $('#ovAgain').addEventListener('click', startGame);
-  $('#ovSwitch').addEventListener('click', () => { showIdle(); playersEl.querySelector('.chip').focus(); });
+  $('#ovSwitch').addEventListener('click', () => { exitPlay(); showIdle(); const c = playersEl.querySelector('.pick'); if (c) c.focus(); });
   win ? SFX.win() : SFX.over();
 }
 
@@ -563,6 +628,7 @@ function resize(){
   ctx.setTransform(w / W, 0, 0, h / H, 0, 0);
 }
 window.addEventListener('resize', resize);
+document.addEventListener('fullscreenchange', () => { setTimeout(resize, 50); });
 
 const SEG = getComputedStyle(document.documentElement).getPropertyValue('--seg').trim() || '#23261f';
 const seg = (a) => `rgba(35,38,31,${a})`;
