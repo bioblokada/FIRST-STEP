@@ -239,7 +239,7 @@ const DEFAULTS = [
     wave:'triangle', pitch:1.5,
     start:'Телефоны летят!', streak:['Экран целый!','Новый айфон!','Селфи на память!'], miss:['Экран треснул!','Разбила…'],
     over:['Ну, погоди!','Айфон не вернуть…'] },
-  { id:4, name:'Полина', role:'13 лет', color:'#1f8fd6', items:['🎾'], splat:'💥', f:true, racket:true, tool:'racket',
+  { id:4, name:'Полина', role:'13 лет', color:'#1f8fd6', items:['ball'], splat:'💥', f:true, racket:true, tool:'racket',
     wave:'sine', pitch:0.9,
     start:'Подача!', streak:['Отбила!','Смэш!','Виннер!'], miss:['Аут!','В сетку!'],
     over:['Гейм, сет, матч!','Реванш?'] },
@@ -332,7 +332,7 @@ function renderRecords(){
   }
 }
 const TOOLS = { basket:'корзиной', racket:'ракеткой', stroller:'коляской', bag:'сумкой', gamepad:'геймпадом' };
-const EMO = { creeper:'🟩', zombie:'🧟', diamond:'💎', pig:'🐷', tnt:'🧨', egg:'🥚', phone:'📱' };
+const EMO = { creeper:'🟩', zombie:'🧟', diamond:'💎', pig:'🐷', tnt:'🧨', egg:'🥚', phone:'📱', ball:'🎾' };
 const itemLabel = p => p.items.map(i => EMO[i] || (i.startsWith('photo:') ? '🧒' : i)).join('');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -615,6 +615,13 @@ function drawItem(x, y, text, size, alpha){
     ctx.fillStyle = '#ffffff'; ctx.fillRect(-w/2 + 6, -h/2 + 9, w - 12, 3); ctx.fillRect(-w/2 + 6, -h/2 + 15, w * 0.5, 3); // «иконки»
     ctx.fillStyle = seg(0.95); ctx.beginPath(); ctx.arc(0, h/2 - 4, 1.8, 0, Math.PI*2); ctx.fill();
     ctx.restore();
+  } else if (text === 'ball'){
+    const r = size * 0.42;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = '#d9f24a'; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = seg(0.95); ctx.stroke();
+    ctx.lineWidth = 2.2; ctx.strokeStyle = '#ffffff';                                                     // белые швы
+    ctx.beginPath(); ctx.arc(x - r * 0.95, y, r * 0.95, -0.9, 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x + r * 0.95, y, r * 0.95, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
   } else if (text === 'egg'){
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35);
     ctx.beginPath(); ctx.ellipse(0, 0, size * 0.34, size * 0.44, 0, 0, Math.PI*2);
@@ -643,7 +650,7 @@ function drawItem(x, y, text, size, alpha){
 }
 
 function drawRolling(x, y, item){
-  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' ? 36 : SPRITES[item] ? 30 : 32, 1);
+  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' || item === 'ball' ? 36 : SPRITES[item] ? 30 : 32, 1);
 }
 
 function drawWolf(now){
