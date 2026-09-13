@@ -226,7 +226,7 @@
 
 /* ================= профили семьи ================= */
 const DEFAULTS = [
-  { id:1, name:'Папа', role:'классика', color:'#c8402f', items:['🥚'], splat:'🍳', wolf:true, tool:'basket',
+  { id:1, name:'Папа', role:'классика', color:'#c8402f', items:['egg'], splat:'🍳', wolf:true, tool:'basket',
     wave:'square', pitch:1.0,
     start:'Ну, погоди!', streak:['Заяц, ну погоди!','Волк в ударе!','Как в детстве!'], miss:['Яичница!','Эх, волк…'],
     over:['Ну, заяц, погоди!','Ещё партию?'] },
@@ -344,7 +344,7 @@ function renderRecords(){
   }
 }
 const TOOLS = { basket:'корзиной', racket:'ракеткой', stroller:'коляской', bag:'сумкой', gamepad:'геймпадом' };
-const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i.startsWith('photo:') ? '🧒' : i).join('');
+const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i==='egg' ? '🥚' : i.startsWith('photo:') ? '🧒' : i).join('');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* переименование */
@@ -510,7 +510,7 @@ function tick(now){
   const arrived = G.eggs.filter(e => e.step >= STEPS);
   G.eggs = G.eggs.filter(e => e.step < STEPS);
   for (const e of arrived){
-    if (e.chute === G.basket){ caught(now); if (cur().racket) G.returns.push({ chute:e.chute, item:e.item, t0:now, dur:520 }); } else missed(e.chute, now);
+    if (e.chute === G.basket){ caught(now); if (cur().racket) G.returns.push({ chute:e.chute, item:e.item, t0:now, dur:520 }); } else missed(e.chute, now, e.item);
     if (!G.running) return;
   }
   trySpawn();
@@ -531,10 +531,10 @@ function caught(now){
   if (G.score >= 999) endGame(true);
 }
 
-function missed(chute, now){
+function missed(chute, now, item){
   const p = cur();
   G.misses++; G.streak = 0; SFX.miss();
-  G.broken = { side: chute < 2 ? 0 : 1, until: now + 1500 };
+  G.broken = { side: chute < 2 ? 0 : 1, chute, item, t0: now, until: now + 2200 };
   G.bubble = { text: p.miss[Math.floor(Math.random() * p.miss.length)], until: now + 1200 };
   if (G.misses >= 3) endGame(false);
 }
@@ -592,7 +592,12 @@ function drawChutes(){
 
 function drawItem(x, y, text, size, alpha){
   ctx.save(); ctx.globalAlpha = alpha;
-  if (text.startsWith('photo:')){
+  if (text === 'egg'){
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35);
+    ctx.beginPath(); ctx.ellipse(0, 0, size * 0.34, size * 0.44, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = seg(0.95); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.restore();
+  } else if (text.startsWith('photo:')){
     const q = P[+text.slice(6) - 1], r = size / 2;
     ctx.beginPath(); ctx.arc(x, y, r + 2, 0, Math.PI*2); ctx.fillStyle = seg(0.95); ctx.fill();
     ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.clip();
@@ -613,15 +618,8 @@ function drawItem(x, y, text, size, alpha){
   ctx.restore();
 }
 
-function drawRolling(x, y, item, color){
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-  ctx.fillStyle = '#fbfaf3'; ctx.beginPath(); ctx.arc(x, y, 23, 0, Math.PI*2); ctx.fill();
-  ctx.shadowColor = 'transparent';
-  ctx.globalAlpha = 0.22; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
-  ctx.lineWidth = 3; ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(x, y, 23, 0, Math.PI*2); ctx.stroke();
-  ctx.restore();
-  drawItem(x, y, item, item.startsWith('photo:') ? 40 : 32, 1);
+function drawRolling(x, y, item){
+  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' ? 36 : 32, 1);
 }
 
 function drawWolf(now){
@@ -767,7 +765,7 @@ function draw(now){
   ctx.clearRect(0, 0, W, H);
   drawBackdrop(); drawHUD(); HENS.forEach(drawHen); drawChutes();
   const p = cur();
-  for (const e of G.eggs){ const q = chutePoint(e.chute, e.step); drawRolling(q.x, q.y, e.item, p.color); }
+  for (const e of G.eggs){ const q = chutePoint(e.chute, e.step); drawRolling(q.x, q.y, e.item); }
   G.returns = G.returns.filter(r => now - r.t0 < r.dur);
   for (const r of G.returns){
     const t = (now - r.t0) / r.dur, a = BASKET[r.chute], b = HENS[r.chute];
@@ -775,9 +773,20 @@ function draw(now){
   }
   drawWolf(now);
   if (G.broken && G.broken.until > now){
-    const bx = G.broken.side ? 470 : 170;
-    if (p.boom){ const k = Math.min(1, (now - (G.broken.until - 1500)) / 250); drawItem(bx - 16, 380, '💣', 26, 1); drawItem(bx + 18, 372, '💥', 26 + 18 * k, 1); }
-    else drawItem(bx, 380, p.splat, 30, 1);
+    const B = G.broken, fx = B.side ? 470 : 170, fy = 372, FALL = 320;
+    const start = chutePoint(B.chute, STEPS - 1), sx0 = start.x + (B.side ? -34 : 34), sy0 = start.y + 8;
+    const t = Math.min(1, (now - B.t0) / FALL);
+    if (t < 1){                                                            // летит с края лотка на пол
+      const x = sx0 + (fx - sx0) * t, y = sy0 + (fy - sy0) * t * t;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2.5 * (B.side ? -1 : 1)); drawRolling(0, 0, B.item); ctx.restore();
+    } else {                                                               // разбилось
+      const k = Math.min(1, (now - B.t0 - FALL) / 220);
+      ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#fbfaf3'; ctx.beginPath(); ctx.ellipse(fx, fy + 4, 40 + 10 * k, 16 + 4 * k, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+      if (p.boom){ drawItem(fx - 18, fy - 4, '💣', 30, 1); drawItem(fx + 20, fy - 12, '💥', 30 + 22 * k, 1); }
+      else drawItem(fx, fy - 6, p.splat, 34 + 14 * k, 1);
+      ctx.fillStyle = '#b3261e'; ctx.font = '700 16px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('ПРОМАХ', fx, fy - 42);
+    }
   }
   if (G.bubble && G.bubble.until > now){
     ctx.font = '700 15px Rubik, sans-serif'; const tw = ctx.measureText(G.bubble.text).width + 24;
