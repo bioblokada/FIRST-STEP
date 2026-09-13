@@ -332,7 +332,8 @@ function renderRecords(){
   }
 }
 const TOOLS = { basket:'корзиной', racket:'ракеткой', stroller:'коляской', bag:'сумкой', gamepad:'геймпадом' };
-const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i==='egg' ? '🥚' : i==='phone' ? '📱' : i.startsWith('photo:') ? '🧒' : i).join('');
+const EMO = { creeper:'🟩', zombie:'🧟', diamond:'💎', pig:'🐷', tnt:'🧨', egg:'🥚', phone:'📱' };
+const itemLabel = p => p.items.map(i => EMO[i] || (i.startsWith('photo:') ? '🧒' : i)).join('');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* переименование */
@@ -555,14 +556,26 @@ function drawNumber(x, y, h, n, digits){
 }
 
 function drawHen(hn){
-  ctx.save(); ctx.translate(hn.x, hn.y); ctx.scale(hn.dir, 1); ctx.fillStyle = seg(0.95);
-  ctx.beginPath(); ctx.ellipse(0, 6, 24, 15, 0, 0, Math.PI*2); ctx.fill();          // тело
-  ctx.beginPath(); ctx.arc(18, -12, 10, 0, Math.PI*2); ctx.fill();                   // голова
-  ctx.beginPath(); ctx.moveTo(26, -12); ctx.lineTo(36, -9); ctx.lineTo(26, -6); ctx.fill(); // клюв
-  ctx.beginPath(); ctx.moveTo(12, -20); ctx.lineTo(16, -28); ctx.lineTo(20, -20); ctx.lineTo(24, -27); ctx.lineTo(26, -19); ctx.fill(); // гребешок
-  ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-34, -14); ctx.lineTo(-28, 2); ctx.lineTo(-38, -4); ctx.lineTo(-24, 8); ctx.fill(); // хвост
-  ctx.fillRect(-6, 18, 4, 10); ctx.fillRect(4, 18, 4, 10);                           // ноги
-  ctx.fillStyle = 'rgba(166,173,151,0.9)'; ctx.beginPath(); ctx.arc(20, -14, 2, 0, Math.PI*2); ctx.fill(); // глаз
+  ctx.save(); ctx.translate(hn.x, hn.y); ctx.scale(hn.dir, 1);
+  ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = '#2b2620';
+  // хвост
+  ctx.fillStyle = '#f6efe0'; ctx.beginPath(); ctx.moveTo(-20, 2); ctx.lineTo(-40, -18); ctx.lineTo(-30, 0); ctx.lineTo(-44, -6); ctx.lineTo(-30, 6); ctx.lineTo(-42, 10); ctx.lineTo(-22, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // ноги
+  ctx.strokeStyle = '#e28b1e'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-5, 18); ctx.lineTo(-7, 30); ctx.moveTo(-13, 31); ctx.lineTo(-7, 30); ctx.lineTo(-1, 31); ctx.moveTo(7, 18); ctx.lineTo(7, 30); ctx.moveTo(1, 31); ctx.lineTo(7, 30); ctx.lineTo(13, 31); ctx.stroke();
+  // тело и крыло
+  ctx.strokeStyle = '#2b2620'; ctx.lineWidth = 2.5;
+  ctx.fillStyle = '#fbf7ee'; ctx.beginPath(); ctx.ellipse(0, 6, 25, 16, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#eadfc6'; ctx.beginPath(); ctx.ellipse(-4, 6, 13, 8, 0.3, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // шея и голова
+  ctx.fillStyle = '#fbf7ee'; ctx.beginPath(); ctx.moveTo(10, -2); ctx.lineTo(14, -18); ctx.lineTo(26, -14); ctx.lineTo(22, 2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(20, -18, 11, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // гребешок и бородка
+  ctx.fillStyle = '#d8332b'; ctx.beginPath(); ctx.moveTo(11, -24); ctx.quadraticCurveTo(12, -36, 17, -30); ctx.quadraticCurveTo(20, -40, 24, -30); ctx.quadraticCurveTo(28, -37, 29, -25); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(24, -6, 3, 5, 0, 0, Math.PI*2); ctx.fill();
+  // клюв и глаз
+  ctx.fillStyle = '#f0b429'; ctx.beginPath(); ctx.moveTo(29, -20); ctx.lineTo(42, -16); ctx.lineTo(29, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2b2620'; ctx.beginPath(); ctx.arc(23, -20, 2.2, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
@@ -577,6 +590,20 @@ function drawChutes(){
     ctx.lineWidth = 5;
   }
 }
+
+const SPRITES = {
+  creeper: { pal:{ g:'#4caf3c', d:'#2f7a26', k:'#111111' }, rows:[
+    'dggdggdg','gggggggd','gkkggkkg','gkkggkkg','gggkkggg','ggkkkkgg','dgkkkkgd','ggkggkgg' ] },
+  zombie:  { pal:{ g:'#5d9a4a', d:'#3f6f33', k:'#111111', b:'#2a5a7a' }, rows:[
+    'ddgggddg','ggggdggg','gkkggkkg','gkkggkkg','ggggdggg','gggkkggg','dgkkkkgd','bbbbbbbb' ] },
+  pig:     { pal:{ p:'#f2a4b4', d:'#d9788e', k:'#111111', w:'#ffffff' }, rows:[
+    'pppppppp','pdppppdp','pkwppwkp','pppppppp','ppddddpp','pdkddkdp','ppddddpp','pppppppp' ] },
+  diamond: { pal:{ c:'#5fe3f0', w:'#e8fdff', b:'#1f9fb0', k:'#123a40' }, rows:[
+    '..kkkk..','.kwccck.','kwcccccbk','kccccccbk','.kccccb.','.kcccb..','..kcb...','...k....'.padEnd(8,'.') ] },
+  tnt:     { pal:{ r:'#d93b2b', d:'#8f2419', w:'#f4e7d3', k:'#111111' }, rows:[
+    'rdrdrdrd','rrrrrrrr','wwwwwwww','wkwkwwkw','wkwkwkkw','wwwwwwww','rrrrrrrr','drdrdrdr' ] },
+};
+for (const sp of Object.values(SPRITES)) sp.rows = sp.rows.map(r => r.slice(0, 8).padEnd(8, '.'));
 
 function drawItem(x, y, text, size, alpha){
   ctx.save(); ctx.globalAlpha = alpha;
@@ -601,13 +628,13 @@ function drawItem(x, y, text, size, alpha){
     if (qi){ const m = Math.min(qi.width, qi.height); ctx.drawImage(qi, (qi.width-m)/2, (qi.height-m)/2, m, m, x - r, y - r, size, size); }
     else { ctx.fillStyle = q.color; ctx.fillRect(x - r, y - r, size, size); ctx.fillStyle = '#fff'; ctx.font = `700 ${size*0.6}px Rubik, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(q.name.slice(0,1).toUpperCase(), x, y + 1); }
     ctx.restore();
-  } else if (text === 'creeper'){
-    const u = size / 8, o = -size / 2; ctx.fillStyle = '#4caf3c'; ctx.fillRect(x + o, y + o, size, size);
-    ctx.fillStyle = '#2f7a26';
-    [[0,0],[3,0],[6,1],[1,2],[5,3],[2,6],[7,5],[0,7],[4,7]].forEach(([a,b]) => ctx.fillRect(x + o + a*u, y + o + b*u, u, u));
-    ctx.fillStyle = '#111';
-    ctx.fillRect(x + o + u, y + o + 2*u, 2*u, 2*u); ctx.fillRect(x + o + 5*u, y + o + 2*u, 2*u, 2*u);
-    ctx.fillRect(x + o + 3*u, y + o + 4*u, 2*u, 3*u); ctx.fillRect(x + o + 2*u, y + o + 5*u, u, 2*u); ctx.fillRect(x + o + 5*u, y + o + 5*u, u, 2*u);
+  } else if (SPRITES[text]){
+    const sp = SPRITES[text], u = size / 8, o = -size / 2;
+    ctx.fillStyle = seg(0.95); ctx.fillRect(x + o - 2, y + o - 2, size + 4, size + 4);          // тёмная обводка
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++){
+      const ch = sp.rows[r][c]; if (ch === '.') continue;
+      ctx.fillStyle = sp.pal[ch]; ctx.fillRect(x + o + c*u, y + o + r*u, u + 0.5, u + 0.5);
+    }
   } else {
     ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y);
@@ -616,7 +643,7 @@ function drawItem(x, y, text, size, alpha){
 }
 
 function drawRolling(x, y, item){
-  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' ? 36 : 32, 1);
+  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' ? 36 : SPRITES[item] ? 30 : 32, 1);
 }
 
 function drawWolf(now){
@@ -626,13 +653,26 @@ function drawWolf(now){
   const sx = left ? 282 : 358, sy = 214;
   ctx.fillStyle = seg(0.95); ctx.strokeStyle = seg(0.95); ctx.lineCap = 'round';
   if (p.wolf){
-    rr(276, 196, 88, 118, 22); ctx.fill();                                  // корпус
-    rr(284, 306, 26, 42, 8); ctx.fill(); rr(330, 306, 26, 42, 8); ctx.fill(); // лапы
-    ctx.beginPath(); ctx.moveTo(left ? 362 : 278, 296); ctx.quadraticCurveTo(left ? 402 : 238, 286, left ? 396 : 244, 254);
-    ctx.lineWidth = 12; ctx.stroke();                                        // хвост
-    ctx.lineWidth = 16;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(sx, sy + 34); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
+    const GREY = '#8d949c', DARK = '#2b2620';
+    ctx.lineJoin = 'round';
+    // хвост
+    ctx.strokeStyle = GREY; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(left ? 358 : 282, 292); ctx.quadraticCurveTo(left ? 404 : 236, 290, left ? 398 : 242, 250); ctx.stroke();
+    ctx.strokeStyle = DARK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(left ? 358 : 282, 285); ctx.quadraticCurveTo(left ? 411 : 229, 286, left ? 401 : 239, 246); ctx.stroke();
+    // клёши
+    ctx.fillStyle = '#e07a2a'; ctx.beginPath(); ctx.moveTo(286, 286); ctx.lineTo(354, 286); ctx.lineTo(364, 346); ctx.lineTo(326, 346); ctx.lineTo(320, 318); ctx.lineTo(314, 346); ctx.lineTo(276, 346); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = DARK; rr(272, 342, 44, 12, 5); ctx.fill(); rr(324, 342, 44, 12, 5); ctx.fill();   // ботинки
+    // рубашка
+    ctx.fillStyle = '#e8578f'; ctx.beginPath(); ctx.moveTo(280, 204); ctx.lineTo(360, 204); ctx.lineTo(370, 236); ctx.lineTo(358, 240); ctx.lineTo(356, 290); ctx.lineTo(284, 290); ctx.lineTo(282, 240); ctx.lineTo(270, 236); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fbf7ee'; ctx.beginPath(); ctx.moveTo(302, 204); ctx.lineTo(320, 224); ctx.lineTo(338, 204); ctx.lineTo(330, 200); ctx.lineTo(320, 210); ctx.lineTo(310, 200); ctx.closePath(); ctx.fill(); ctx.stroke(); // воротник
+    ctx.fillStyle = DARK; [236, 252, 268].forEach(y => { ctx.beginPath(); ctx.arc(320, y, 2.2, 0, Math.PI*2); ctx.fill(); }); // пуговицы
+    // лапы к корзине (серые, с тёмной обводкой)
+    const ax = left ? 284 : 356;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = DARK; ctx.lineWidth = 19; ctx.beginPath(); ctx.moveTo(ax, 216); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
+    ctx.strokeStyle = GREY; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(ax, 216); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
+    ctx.strokeStyle = DARK; ctx.lineWidth = 19; ctx.beginPath(); ctx.moveTo(ax, 250); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
+    ctx.strokeStyle = GREY; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(ax, 250); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
+    ctx.strokeStyle = DARK; ctx.lineWidth = 2.5;
   } else {
     // человек: шея, потом платье для девочек или футболка с брюками
     ctx.fillRect(310, 190, 20, 14);                                          // шея
@@ -661,29 +701,27 @@ function drawWolf(now){
     ctx.beginPath(); ctx.moveTo(left ? 276 : 364, 232); ctx.lineTo(left ? 262 : 378, 246); ctx.stroke();
   }
   drawCatcher(p, bp, left);
-  // голова: уши + фото
+  // голова: у волка своя мультяшная, у остальных фото в круге
   const tilt = (left ? -1 : 1) * (top ? -0.12 : 0.1);
   ctx.save(); ctx.translate(cx, headY); ctx.rotate(tilt);
-  ctx.fillStyle = seg(0.95);
   if (p.wolf){
-    ctx.beginPath(); ctx.moveTo(-36, -22); ctx.lineTo(-30, -62); ctx.lineTo(-6, -38); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(36, -22); ctx.lineTo(30, -62); ctx.lineTo(6, -38); ctx.closePath(); ctx.fill();
-  } else { ctx.fillStyle = p.color; }
-  ctx.beginPath(); ctx.arc(0, 0, headR + 4, 0, Math.PI*2); ctx.fill();
-  ctx.save(); ctx.beginPath(); ctx.arc(0, 0, headR, 0, Math.PI*2); ctx.clip();
-  if (p.wolf){
-    drawWolfFace(left, headR);
-  } else if (p.img){
-    ctx.save(); if (left) ctx.scale(-1, 1);
-    const m = Math.min(p.img.width, p.img.height);
-    ctx.drawImage(p.img, (p.img.width-m)/2, (p.img.height-m)/2, m, m, -headR, -headR, headR*2, headR*2);
-    ctx.restore();
+    drawWolfHead(left);
   } else {
-    ctx.fillStyle = p.color; ctx.fillRect(-headR, -headR, headR*2, headR*2);
-    ctx.fillStyle = '#fff'; ctx.font = '700 40px "Rubik Mono One", Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(p.name.slice(0,1).toUpperCase(), 0, 3);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(0, 0, headR + 4, 0, Math.PI*2); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, headR, 0, Math.PI*2); ctx.clip();
+    if (p.img){
+      ctx.save(); if (left) ctx.scale(-1, 1);
+      const m = Math.min(p.img.width, p.img.height);
+      ctx.drawImage(p.img, (p.img.width-m)/2, (p.img.height-m)/2, m, m, -headR, -headR, headR*2, headR*2);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = p.color; ctx.fillRect(-headR, -headR, headR*2, headR*2);
+      ctx.fillStyle = '#fff'; ctx.font = '700 40px "Rubik Mono One", Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(p.name.slice(0,1).toUpperCase(), 0, 3);
+    }
+    ctx.restore();
   }
-  ctx.restore();
   if (G.flash > now){ ctx.strokeStyle = p.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, headR + 8, 0, Math.PI*2); ctx.stroke(); }
   ctx.restore();
 }
@@ -722,28 +760,48 @@ function drawCatcher(p, bp, left){
       ctx.beginPath(); ctx.arc(-12, 12, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(12, 12, 5, 0, Math.PI*2); ctx.fill(); // стики
       ctx.fillRect(-10, -6, 20, 8);                                                                                          // тачпад
       break;
-    default: // корзина
-      ctx.beginPath(); ctx.moveTo(-34, -10); ctx.lineTo(34, -10); ctx.lineTo(26, 20); ctx.lineTo(-26, 20); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = LIGHT; ctx.lineWidth = 2;
+    default: // плетёная корзина
+      ctx.lineJoin = 'round';
+      ctx.fillStyle = '#c98a45'; ctx.beginPath(); ctx.moveTo(-34, -10); ctx.lineTo(34, -10); ctx.lineTo(26, 20); ctx.lineTo(-26, 20); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#7a4a1c'; ctx.lineWidth = 2;
       for (let i = -20; i <= 20; i += 10){ ctx.beginPath(); ctx.moveTo(i, -8); ctx.lineTo(i*0.8, 18); ctx.stroke(); }
-      ctx.strokeStyle = seg(0.95); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-36, -12); ctx.lineTo(36, -12); ctx.stroke();
+      for (let y = -2; y <= 14; y += 8){ ctx.beginPath(); ctx.moveTo(-31 + (y+10)*0.25, y); ctx.lineTo(31 - (y+10)*0.25, y); ctx.stroke(); }
+      ctx.strokeStyle = '#2b2620'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-34, -10); ctx.lineTo(34, -10); ctx.lineTo(26, 20); ctx.lineTo(-26, 20); ctx.closePath(); ctx.stroke();
+      ctx.fillStyle = '#a86a2c'; rr(-37, -15, 74, 8, 3); ctx.fill(); ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawWolfFace(left, r){
+function drawWolfHead(left){
+  const GREY = '#8d949c', DARK = '#2b2620';
   ctx.save(); if (left) ctx.scale(-1, 1);
-  ctx.fillStyle = seg(0.95); ctx.fillRect(-r, -r, r*2, r*2);           // тёмная голова
-  ctx.fillStyle = 'rgba(166,173,151,0.95)';                             // светлая морда
-  ctx.beginPath(); ctx.ellipse(10, 12, 26, 20, -0.25, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-8, -10, 12, 8, 0.3, 0, Math.PI*2); ctx.fill(); // белок глаза
-  ctx.fillStyle = seg(0.95);
-  ctx.beginPath(); ctx.arc(-6, -9, 4, 0, Math.PI*2); ctx.fill();        // зрачок
-  ctx.beginPath(); ctx.moveTo(-20, -22); ctx.lineTo(2, -16); ctx.lineTo(-18, -14); ctx.fill(); // бровь
-  ctx.beginPath(); ctx.arc(30, 6, 6, 0, Math.PI*2); ctx.fill();          // нос
-  ctx.lineWidth = 3; ctx.strokeStyle = seg(0.95); ctx.beginPath(); ctx.moveTo(-4, 20); ctx.quadraticCurveTo(12, 30, 30, 18); ctx.stroke(); // ухмылка
-  ctx.fillStyle = 'rgba(166,173,151,0.95)';
-  [[6,22],[14,25],[22,24]].forEach(([x,y]) => { ctx.beginPath(); ctx.moveTo(x-3, y); ctx.lineTo(x+3, y); ctx.lineTo(x, y+7); ctx.fill(); }); // зубы
+  ctx.lineJoin = 'round'; ctx.strokeStyle = DARK; ctx.lineWidth = 2.5;
+  // уши
+  ctx.fillStyle = GREY;
+  ctx.beginPath(); ctx.moveTo(-40, -22); ctx.lineTo(-34, -66); ctx.lineTo(-8, -36); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30, -26); ctx.lineTo(34, -64); ctx.lineTo(6, -38); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e9b4b8';
+  ctx.beginPath(); ctx.moveTo(-34, -30); ctx.lineTo(-31, -54); ctx.lineTo(-16, -37); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(26, -32); ctx.lineTo(29, -52); ctx.lineTo(14, -38); ctx.closePath(); ctx.fill();
+  // голова
+  ctx.fillStyle = GREY; ctx.beginPath(); ctx.ellipse(-2, 0, 42, 38, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // чуб
+  ctx.fillStyle = DARK; ctx.beginPath(); ctx.moveTo(-36, -22); ctx.lineTo(-30, -44); ctx.lineTo(-18, -32); ctx.lineTo(-10, -52); ctx.lineTo(0, -34); ctx.lineTo(10, -50); ctx.lineTo(16, -32); ctx.lineTo(26, -40); ctx.lineTo(24, -18); ctx.quadraticCurveTo(0, -30, -36, -22); ctx.closePath(); ctx.fill();
+  // морда
+  ctx.fillStyle = '#f6efe0'; ctx.beginPath(); ctx.ellipse(18, 12, 30, 20, -0.15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // ухмылка и зубы
+  ctx.beginPath(); ctx.moveTo(-6, 16); ctx.quadraticCurveTo(16, 34, 44, 14); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; [[6,20],[16,25],[26,26],[36,21]].forEach(([x,y]) => { ctx.beginPath(); ctx.moveTo(x-4, y); ctx.lineTo(x+4, y); ctx.lineTo(x, y+7); ctx.closePath(); ctx.fill(); ctx.stroke(); });
+  // нос
+  ctx.fillStyle = DARK; ctx.beginPath(); ctx.ellipse(44, 2, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(42, 0, 2.2, 0, Math.PI*2); ctx.fill();
+  // глаза с тяжёлыми веками
+  ctx.fillStyle = '#fbf3c4';
+  ctx.beginPath(); ctx.ellipse(-8, -8, 10, 8, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(14, -10, 10, 8, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(-5, -6, 3.2, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(17, -8, 3.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = GREY; ctx.beginPath(); ctx.ellipse(-8, -12, 11, 6, 0, Math.PI, 0); ctx.fill(); ctx.beginPath(); ctx.ellipse(14, -14, 11, 6, 0, Math.PI, 0); ctx.fill(); // веки
+  ctx.strokeStyle = DARK; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(-20, -18); ctx.lineTo(-2, -12); ctx.moveTo(4, -14); ctx.lineTo(26, -22); ctx.stroke(); // брови
   ctx.restore();
 }
 
