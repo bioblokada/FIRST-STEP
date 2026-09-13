@@ -189,7 +189,7 @@
     <div class="controls">
       <div class="pad left">
         <button type="button" data-pos="0" aria-label="Левый верхний лоток">↖<small>Q</small></button>
-        <button type="button" data-pos="1" aria-label="Левый нижний лоток">↙<small>A</small></button>
+        <button type="button" data-pos="1" aria-label="Левый нижний лоток">↙<small>Z</small></button>
       </div>
       <div class="mid">
         <div class="modes">
@@ -200,8 +200,8 @@
         <button type="button" class="kbtn" id="btnSound" aria-pressed="true">Звук: вкл</button>
       </div>
       <div class="pad right">
-        <button type="button" data-pos="2" aria-label="Правый верхний лоток">↗<small>P</small></button>
-        <button type="button" data-pos="3" aria-label="Правый нижний лоток">↘<small>L</small></button>
+        <button type="button" data-pos="2" aria-label="Правый верхний лоток">↗<small>O</small></button>
+        <button type="button" data-pos="3" aria-label="Правый нижний лоток">↘<small>M</small></button>
       </div>
     </div>
   </div>
@@ -209,8 +209,8 @@
   <section class="info">
     <div>
       <h3>Как играть</h3>
-      <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. На 200 и 500 очках промахи прощаются. 999 очков — победа.</p>
-      <p>Клавиши: <kbd>Q</kbd> и <kbd>A</kbd> — левые лотки, <kbd>P</kbd> и <kbd>L</kbd> — правые (или <kbd>↑</kbd> <kbd>↓</kbd>). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне просто нажимай на четверти экрана или на круглые кнопки.</p>
+      <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 30 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа.</p>
+      <p>Клавиши: <kbd>Q</kbd> и <kbd>Z</kbd> — левые лотки, <kbd>O</kbd> и <kbd>M</kbd> — правые (или стрелки: <kbd>←</kbd> <kbd>↓</kbd> слева, <kbd>↑</kbd> <kbd>→</kbd> справа). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне просто нажимай на четверти экрана или на круглые кнопки.</p>
       <p>Фото: положи файлы <code>photos/1.jpg … 5.jpg</code> рядом с игрой или загрузи фото кнопкой выше, оно останется в этом браузере.</p>
     </div>
     <div>
@@ -399,6 +399,7 @@ const SFX = {
   catch: () => play([880, 1320], {step:0.06}),
   miss:  () => cur().boom ? boom() : play([240, 180, 120], {step:0.14, vol:0.14}),
   bonus: () => play([660, 880, 1100, 1320], {step:0.08}),
+  level: () => play([784, 988, 1175], {step:0.07}),
   start: () => play([523, 659, 784, 1047], {step:0.1}),
   over:  () => play([440, 415, 392, 370, 0, 349, 0, 330], {step:0.16, vol:0.14}),
   win:   () => play([784, 784, 784, 1047, 0, 1047, 1319, 1568], {step:0.12}),
@@ -431,10 +432,11 @@ const G = {
   flash:0, headTilt:0,
 };
 
+const LEVEL_STEP = 30; // очков на уровень
+const levelFor = score => Math.floor(score / LEVEL_STEP) + 1;
 function periodFor(score){
-  const base = mode==='A' ? 640 : 470, min = mode==='A' ? 270 : 210;
-  const k = Math.min(1, score / 450);
-  return base - (base - min) * k;
+  const base = mode==='A' ? 950 : 700, min = mode==='A' ? 260 : 200;
+  return Math.max(min, base * Math.pow(0.88, levelFor(score) - 1));
 }
 
 function startGame(){
@@ -493,10 +495,11 @@ function setBasket(pos){
 }
 
 function trySpawn(){
-  const baseP = mode==='A' ? 0.34 : 0.48;
-  const maxE = (mode==='A' ? 2 : 3) + (G.score > 150 ? 1 : 0) + (G.score > 400 ? 1 : 0);
+  const lvl = levelFor(G.score);
+  const baseP = (mode==='A' ? 0.30 : 0.42) + Math.min(0.3, (lvl - 1) * 0.03);
+  const maxE = (mode==='A' ? 2 : 3) + (lvl > 4 ? 1 : 0) + (lvl > 10 ? 1 : 0);
   if (G.eggs.length >= maxE) return;
-  if (Math.random() > baseP + Math.min(0.28, G.score / 1400)) return;
+  if (Math.random() > baseP) return;
   const free = [0,1,2,3].filter(c => !G.eggs.some(e => e.chute===c && e.step < 2));
   if (!free.length) return;
   const its = cur().items; G.eggs.push({ chute: free[Math.floor(Math.random() * free.length)], step: 0, item: its[Math.floor(Math.random() * its.length)] });
@@ -520,6 +523,8 @@ function caught(now){
   if ((G.score === 200 || G.score === 500) && !G.forgiven[G.score]){
     G.forgiven[G.score] = true; G.misses = 0; SFX.bonus();
     G.bubble = { text: 'Промахи прощены!', until: now + 1500 };
+  } else if (G.score % LEVEL_STEP === 0){
+    SFX.level(); G.bubble = { text: 'Уровень ' + levelFor(G.score) + '!', until: now + 1500 };
   } else if (G.streak % 20 === 0){
     G.bubble = { text: p.streak[Math.floor(Math.random() * p.streak.length)], until: now + 1400 };
   }
@@ -608,29 +613,56 @@ function drawItem(x, y, text, size, alpha){
   ctx.restore();
 }
 
+function drawRolling(x, y, item, color){
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+  ctx.fillStyle = '#fbfaf3'; ctx.beginPath(); ctx.arc(x, y, 23, 0, Math.PI*2); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.globalAlpha = 0.22; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.lineWidth = 3; ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(x, y, 23, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+  drawItem(x, y, item, item.startsWith('photo:') ? 40 : 32, 1);
+}
+
 function drawWolf(now){
   const p = cur(); const bp = BASKET[G.basket];
   const left = G.basket < 2, top = G.basket % 2 === 0;
   const cx = 320, headY = 150, headR = 44;
-  ctx.fillStyle = seg(0.95);
-  // корпус
-  rr(276, 196, 88, 118, 22); ctx.fill();
-  // ноги
-  rr(284, 306, 26, 42, 8); ctx.fill(); rr(330, 306, 26, 42, 8); ctx.fill();
-  // хвост
-  ctx.beginPath(); ctx.moveTo(left ? 362 : 278, 296); ctx.quadraticCurveTo(left ? 402 : 238, 286, left ? 396 : 244, 254);
-  ctx.lineWidth = 12; ctx.strokeStyle = seg(0.95); ctx.lineCap = 'round'; ctx.stroke();
-  // руки к корзине
   const sx = left ? 282 : 358, sy = 214;
-  ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sx, sy + 34); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
+  ctx.fillStyle = seg(0.95); ctx.strokeStyle = seg(0.95); ctx.lineCap = 'round';
+  if (p.wolf){
+    rr(276, 196, 88, 118, 22); ctx.fill();                                  // корпус
+    rr(284, 306, 26, 42, 8); ctx.fill(); rr(330, 306, 26, 42, 8); ctx.fill(); // лапы
+    ctx.beginPath(); ctx.moveTo(left ? 362 : 278, 296); ctx.quadraticCurveTo(left ? 402 : 238, 286, left ? 396 : 244, 254);
+    ctx.lineWidth = 12; ctx.stroke();                                        // хвост
+    ctx.lineWidth = 16;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy + 34); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
+  } else {
+    // человек: шея, футболка в цвете игрока, брюки, обувь, руки
+    ctx.fillRect(310, 190, 20, 14);                                          // шея
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.moveTo(284, 204); ctx.lineTo(356, 204); ctx.lineTo(372, 232); ctx.lineTo(356, 240); ctx.lineTo(354, 292);
+    ctx.lineTo(286, 292); ctx.lineTo(284, 240); ctx.lineTo(268, 232); ctx.closePath(); ctx.fill();   // футболка с рукавами
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(292, 284, 56, 4);                          // кромка
+    ctx.fillStyle = seg(0.95);
+    rr(288, 290, 30, 50, 6); ctx.fill(); rr(322, 290, 30, 50, 6); ctx.fill();                        // брюки
+    rr(282, 336, 38, 12, 6); ctx.fill(); rr(320, 336, 38, 12, 6); ctx.fill();                        // обувь
+    ctx.lineWidth = 13; ctx.strokeStyle = '#e9c9a8';                                                  // руки
+    ctx.beginPath(); ctx.moveTo(left ? 276 : 364, 236); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(left ? 364 : 276, 236); ctx.lineTo(left ? 350 : 290, 300); ctx.stroke();
+    ctx.lineWidth = 15; ctx.strokeStyle = p.color;                                                    // рукав
+    ctx.beginPath(); ctx.moveTo(left ? 276 : 364, 232); ctx.lineTo(left ? 262 : 378, 246); ctx.stroke();
+  }
   drawCatcher(p, bp, left);
   // голова: уши + фото
   const tilt = (left ? -1 : 1) * (top ? -0.12 : 0.1);
   ctx.save(); ctx.translate(cx, headY); ctx.rotate(tilt);
   ctx.fillStyle = seg(0.95);
-  ctx.beginPath(); ctx.moveTo(-36, -22); ctx.lineTo(-30, -62); ctx.lineTo(-6, -38); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(36, -22); ctx.lineTo(30, -62); ctx.lineTo(6, -38); ctx.closePath(); ctx.fill();
+  if (p.wolf){
+    ctx.beginPath(); ctx.moveTo(-36, -22); ctx.lineTo(-30, -62); ctx.lineTo(-6, -38); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(36, -22); ctx.lineTo(30, -62); ctx.lineTo(6, -38); ctx.closePath(); ctx.fill();
+  } else { ctx.fillStyle = p.color; }
   ctx.beginPath(); ctx.arc(0, 0, headR + 4, 0, Math.PI*2); ctx.fill();
   ctx.save(); ctx.beginPath(); ctx.arc(0, 0, headR, 0, Math.PI*2); ctx.clip();
   if (p.wolf){
@@ -714,7 +746,7 @@ function drawHUD(){
   ctx.fillStyle = seg(0.95); ctx.font = '700 15px Rubik, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('ИГРА ' + mode, 18, 26);
   ctx.font = '500 12px Rubik, sans-serif'; ctx.fillStyle = seg(0.7);
-  ctx.fillText(cur().name.toUpperCase(), 18, 46);
+  ctx.fillText(cur().name.toUpperCase() + '  ·  УР. ' + levelFor(G.score), 18, 46);
   // счёт
   drawNumber(272, 12, 34, G.score, 3);
   // промахи
@@ -735,12 +767,11 @@ function draw(now){
   ctx.clearRect(0, 0, W, H);
   drawBackdrop(); drawHUD(); HENS.forEach(drawHen); drawChutes();
   const p = cur();
-  for (let c = 0; c < 4; c++) for (let k = 0; k < STEPS; k++){ const q = chutePoint(c, k); drawItem(q.x, q.y, p.items[0], 26, 0.07); }
-  for (const e of G.eggs){ const q = chutePoint(e.chute, e.step); drawItem(q.x, q.y, e.item, 26, 1); }
+  for (const e of G.eggs){ const q = chutePoint(e.chute, e.step); drawRolling(q.x, q.y, e.item, p.color); }
   G.returns = G.returns.filter(r => now - r.t0 < r.dur);
   for (const r of G.returns){
     const t = (now - r.t0) / r.dur, a = BASKET[r.chute], b = HENS[r.chute];
-    drawItem(a.x + (b.x - a.x) * t, a.y + (b.y - 40 - a.y) * t - Math.sin(t * Math.PI) * 70, r.item, 22, 1 - t * 0.6);
+    drawItem(a.x + (b.x - a.x) * t, a.y + (b.y - 40 - a.y) * t - Math.sin(t * Math.PI) * 70, r.item, 28, 1 - t * 0.5);
   }
   drawWolf(now);
   if (G.broken && G.broken.until > now){
@@ -766,7 +797,7 @@ function frame(now){
 }
 
 /* ================= управление ================= */
-const KEYS = { KeyQ:0, KeyW:0, KeyA:1, KeyS:1, KeyZ:1, KeyP:2, KeyO:2, ArrowUp:2, KeyL:3, KeyK:3, ArrowDown:3, Numpad7:0, Numpad1:1, Numpad9:2, Numpad3:3 };
+const KEYS = { KeyQ:0, KeyZ:1, KeyO:2, KeyM:3, ArrowLeft:0, ArrowDown:1, ArrowUp:2, ArrowRight:3, Numpad7:0, Numpad1:1, Numpad9:2, Numpad3:3 };
 document.addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') return;
   if (KEYS[e.code] !== undefined){ e.preventDefault(); pressPad(KEYS[e.code]); return; }
