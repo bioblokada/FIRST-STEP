@@ -185,7 +185,7 @@
   .kbtn.exit{background:linear-gradient(180deg,#e6e0d0,#bfb7a4)}
   body.play{overflow:hidden; padding:0; height:100vh; height:100dvh; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
   .device, .device *{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
-  body.play .wrap > :not(.device){display:none}
+  body.play .wrap > :not(.device):not(.rotate){display:none}
   body.play .device{
     position:fixed; inset:0; z-index:10; border-radius:0; box-shadow:none;
     padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
@@ -302,7 +302,7 @@ const DEFAULTS = [
   { id:5, name:'Мирон', role:'9 лет', color:'#5aa040', items:['creeper','zombie','diamond','pig','tnt'], splat:'💣', boom:true, tool:'gamepad',
     wave:'square', pitch:1.3,
     start:'Крипер идёт!', streak:['Алмаз!','GG!','Крафт удался!'], miss:['Бабах!','Крипер взорвался!'],
-    over:['Ну, крипер, погоди!','Ещё раунд, Мирон?'] },
+    over:['Ну, крипер, погоди!','Реванш?'] },
 ];
 
 const LS = {
