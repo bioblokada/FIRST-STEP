@@ -42,21 +42,41 @@
   .players{display:grid; grid-template-columns:repeat(5,1fr); gap:10px}
   @media (max-width:520px){ .players{grid-template-columns:repeat(3,1fr)} }
   .chip{
-    --accent:#888; appearance:none; border:2px solid transparent; background:var(--page-2); color:var(--ink);
-    border-radius:16px; padding:12px 6px 10px; display:flex; flex-direction:column; align-items:center; gap:6px;
-    cursor:pointer; font:inherit; transition:transform .12s ease, border-color .12s ease;
+    --accent:#888; border:2px solid transparent; background:var(--page-2); color:var(--ink);
+    border-radius:16px; padding:10px 6px 8px; display:flex; flex-direction:column; align-items:center; gap:6px;
+    transition:border-color .12s ease;
   }
-  .chip:hover{transform:translateY(-2px)}
-  .chip:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
   .chip.on{border-color:var(--accent); background:color-mix(in oklab, var(--page-2) 80%, var(--accent))}
+  .chip.drop{border-style:dashed; border-color:var(--accent)}
+  .pick{
+    appearance:none; border:0; background:none; color:inherit; font:inherit; cursor:pointer; padding:2px 0 0;
+    display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; border-radius:12px;
+  }
+  .pick:hover .avatar{transform:translateY(-2px)}
+  .pick:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
   .avatar{
-    width:64px; height:64px; border-radius:50%; overflow:hidden; display:grid; place-items:center;
+    width:64px; height:64px; border-radius:50%; overflow:hidden; display:grid; place-items:center; transition:transform .12s ease;
     background:var(--accent); color:#fff; font-family:"Rubik Mono One", sans-serif; font-size:26px;
     box-shadow:0 0 0 3px var(--page), 0 0 0 5px var(--accent);
   }
   .avatar img{width:100%; height:100%; object-fit:cover; display:block}
   .chip .nm{font-weight:700; font-size:15px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .chip .bs{font-size:12px; color:var(--ink-dim); font-variant-numeric:tabular-nums}
+  .slot{display:flex; gap:4px; align-items:center; margin-top:2px; max-width:100%}
+  .up{
+    font-size:12px; font-weight:500; padding:5px 9px; border-radius:999px; cursor:pointer; white-space:nowrap;
+    border:1px dashed color-mix(in oklab, var(--accent) 70%, var(--ink)); color:var(--ink); background:var(--page);
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  .up:hover{background:color-mix(in oklab, var(--page) 70%, var(--accent))}
+  .up:focus-within{outline:2px solid var(--accent)}
+  .up.has{border-style:solid; background:color-mix(in oklab, var(--page) 75%, var(--accent))}
+  .rm{
+    font:inherit; font-size:12px; width:26px; height:26px; border-radius:50%; border:1px solid #3a4250; background:var(--page);
+    color:var(--ink-dim); cursor:pointer; padding:0;
+  }
+  .rm:hover{color:#fff; border-color:#c8402f}
+  .wolfnote{font-size:11px; color:var(--ink-dim); padding:5px 0}
   .chip .it{font-size:18px; line-height:1}
 
   .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:14px; color:var(--ink-dim)}
@@ -172,9 +192,6 @@
   <div class="toolbar" id="toolbar">
     <span>Игрок: <span class="who" id="whoName">…</span></span>
     <button class="tbtn" id="btnRename" type="button">Переименовать</button>
-    <label class="tbtn" for="photoInput" id="photoLabel">Загрузить фото</label>
-    <input type="file" id="photoInput" accept="image/*" class="sr">
-    <button class="tbtn" id="btnClearPhoto" type="button" hidden>Убрать фото</button>
     <span id="renameBox" hidden><input type="text" id="renameInput" maxlength="16" aria-label="Новое имя"> <button class="tbtn" id="btnRenameOk" type="button">Готово</button></span>
   </div>
 
@@ -211,7 +228,7 @@
       <h3>Как играть</h3>
       <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 30 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа.</p>
       <p>Клавиши: <kbd>Q</kbd> и <kbd>Z</kbd> — левые лотки, <kbd>O</kbd> и <kbd>M</kbd> — правые (или стрелки: <kbd>←</kbd> <kbd>↓</kbd> слева, <kbd>↑</kbd> <kbd>→</kbd> справа). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне просто нажимай на четверти экрана или на круглые кнопки.</p>
-      <p>Фото: положи файлы <code>photos/1.jpg … 5.jpg</code> рядом с игрой или загрузи фото кнопкой выше, оно останется в этом браузере.</p>
+      <p>Фото: под каждым игроком своя кнопка «Фото …», можно и перетащить снимок на карточку. Такое фото хранится только в этом браузере. Чтобы фото было на всех устройствах, положи файлы <code>photos/2.jpg … 5.jpg</code> рядом с игрой.</p>
     </div>
     <div>
       <h3>Рекорды</h3>
@@ -307,8 +324,6 @@ function applyTheme(){
   const p = cur();
   document.documentElement.style.setProperty('--accent', p.color);
   whoName.textContent = p.name;
-  $('#btnClearPhoto').hidden = !p.localImg || !!p.wolf;
-  $('#photoLabel').hidden = !!p.wolf;
   $('#modeA').classList.toggle('on', mode==='A');
   $('#modeB').classList.toggle('on', mode==='B');
   $('#brandStripe').textContent = 'ИМ-02 · ' + p.name.toLowerCase();
@@ -317,22 +332,58 @@ function applyTheme(){
 function renderPlayers(){
   playersEl.innerHTML = '';
   P.forEach((p, i) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'chip' + (i===curIdx ? ' on' : ''); b.style.setProperty('--accent', p.color);
-    b.setAttribute('aria-pressed', i===curIdx);
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (i===curIdx ? ' on' : ''); chip.style.setProperty('--accent', p.color);
+    const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'pick';
+    pick.setAttribute('aria-pressed', i===curIdx); pick.setAttribute('aria-label', 'Играть за ' + p.name);
     const av = document.createElement('span'); av.className = 'avatar';
     if (p.wolf) av.textContent = '🐺';
     else if (p.img){ const im = document.createElement('img'); im.src = p.img.src; im.alt = ''; av.appendChild(im); }
     else av.textContent = p.name.slice(0,1).toUpperCase();
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = p.name; nm.title = p.role;
-    const it = document.createElement('span'); it.className = 'it'; it.textContent = itemLabel(p);
     const bs = document.createElement('span'); bs.className = 'bs';
-    bs.textContent = 'рекорд ' + Math.max(best[p.id].A, best[p.id].B);
-    b.append(av, nm, it, bs);
-    b.addEventListener('click', () => { if (G.running) return; curIdx = i; LS.set('np_player', i); renderPlayers(); showIdle(); });
-    playersEl.appendChild(b);
+    bs.textContent = itemLabel(p) + ' · рекорд ' + Math.max(best[p.id].A, best[p.id].B);
+    pick.append(av, nm, bs);
+    pick.addEventListener('click', () => selectPlayer(i));
+    chip.appendChild(pick);
+
+    if (p.wolf){
+      const note = document.createElement('span'); note.className = 'wolfnote'; note.textContent = 'всегда волк';
+      chip.appendChild(note);
+    } else {
+      const slot = document.createElement('div'); slot.className = 'slot';
+      const up = document.createElement('label'); up.className = 'up' + (p.localImg ? ' has' : '');
+      up.textContent = (p.localImg ? '✓ Фото ' : '📷 Фото ') + genitive(p.name);
+      up.title = 'Загрузить фото для игрока ' + p.name;
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.className = 'sr'; inp.id = 'photo' + p.id;
+      inp.addEventListener('change', e => { const f = e.target.files[0]; if (f) setLocalPhoto(p, f); e.target.value = ''; });
+      up.appendChild(inp); slot.appendChild(up);
+      if (p.localImg){
+        const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'rm'; rm.textContent = '✕';
+        rm.title = 'Убрать фото ' + genitive(p.name); rm.setAttribute('aria-label', rm.title);
+        rm.addEventListener('click', () => { LS.del('np_photo_' + p.id); p.img = null; p.localImg = false; loadPhoto(p); });
+        slot.appendChild(rm);
+      }
+      chip.appendChild(slot);
+      // перетаскивание снимка прямо на карточку
+      chip.addEventListener('dragover', e => { e.preventDefault(); chip.classList.add('drop'); });
+      chip.addEventListener('dragleave', () => chip.classList.remove('drop'));
+      chip.addEventListener('drop', e => {
+        e.preventDefault(); chip.classList.remove('drop');
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && f.type.startsWith('image/')) setLocalPhoto(p, f);
+      });
+    }
+    playersEl.appendChild(chip);
   });
   applyTheme(); renderRecords();
+}
+function selectPlayer(i){ if (G.running) return; curIdx = i; LS.set('np_player', i); renderPlayers(); showIdle(); }
+// «Фото Мусюни», «Фото Таси», «Фото Полины», «Фото Мирона»
+function genitive(n){
+  if (/[ая]$/i.test(n)) return n.slice(0, -1) + (/я$/i.test(n) ? 'и' : (/[гкхжчшщ]а$/i.test(n) ? 'и' : 'ы'));
+  if (/[бвгджзклмнпрстфхцчшщ]$/i.test(n)) return n + 'а';
+  return n;
 }
 
 function renderRecords(){
@@ -359,8 +410,6 @@ function commitRename(){
 $('#btnRenameOk').addEventListener('click', commitRename);
 $('#renameInput').addEventListener('keydown', e => { if (e.key==='Enter') commitRename(); if (e.key==='Escape') $('#renameBox').hidden = true; });
 
-$('#photoInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) setLocalPhoto(cur(), f); e.target.value = ''; });
-$('#btnClearPhoto').addEventListener('click', () => { const p = cur(); LS.del('np_photo_' + p.id); p.img = null; p.localImg = false; loadPhoto(p); });
 
 /* ================= звук ================= */
 let AC = null;
