@@ -226,23 +226,23 @@
 
 /* ================= профили семьи ================= */
 const DEFAULTS = [
-  { id:1, name:'Папа', role:'классика', color:'#c8402f', items:['🥚'], splat:'🍳', wolf:true,
+  { id:1, name:'Папа', role:'классика', color:'#c8402f', items:['🥚'], splat:'🍳', wolf:true, tool:'basket',
     wave:'square', pitch:1.0,
     start:'Ну, погоди!', streak:['Заяц, ну погоди!','Волк в ударе!','Как в детстве!'], miss:['Яичница!','Эх, волк…'],
     over:['Ну, заяц, погоди!','Ещё партию?'] },
-  { id:2, name:'Мусюня', role:'мама', color:'#d9486e', items:['👶','🧒','👧'], splat:'😭', f:true,
+  { id:2, name:'Мусюня', role:'мама', color:'#d9486e', items:['👶','🧒','👧'], splat:'😭', f:true, tool:'stroller',
     wave:'sine', pitch:1.25,
     start:'Дети, ко мне!', streak:['Все дома!','Мама всех поймает!','Ни один не потерялся!'], miss:['Ой, ребёнок!','Куда побежал?!'],
     over:['Ну, детки, погодите!','Собираем заново?'] },
-  { id:3, name:'Тася', role:'15 лет', color:'#8a5cd6', items:['📱'], splat:'💥', f:true,
+  { id:3, name:'Тася', role:'15 лет', color:'#8a5cd6', items:['📱'], splat:'💥', f:true, tool:'bag',
     wave:'triangle', pitch:1.5,
     start:'Телефоны летят!', streak:['Экран целый!','Новый айфон!','Селфи на память!'], miss:['Экран треснул!','Разбила…'],
     over:['Ну, погоди!','Айфон не вернуть…'] },
-  { id:4, name:'Полина', role:'13 лет', color:'#1f8fd6', items:['🎾'], splat:'💥', f:true, racket:true,
+  { id:4, name:'Полина', role:'13 лет', color:'#1f8fd6', items:['🎾'], splat:'💥', f:true, racket:true, tool:'racket',
     wave:'sine', pitch:0.9,
     start:'Подача!', streak:['Отбила!','Смэш!','Виннер!'], miss:['Аут!','В сетку!'],
     over:['Гейм, сет, матч!','Реванш?'] },
-  { id:5, name:'Мирон', role:'9 лет', color:'#5aa040', items:['creeper','🧟','💎','🐷','🧨'], splat:'💥',
+  { id:5, name:'Мирон', role:'9 лет', color:'#5aa040', items:['creeper','🧟','💎','🐷','🧨'], splat:'💥', tool:'gamepad',
     wave:'square', pitch:1.3,
     start:'Крипер идёт!', streak:['Алмаз!','GG!','Крафт удался!'], miss:['Бабах!','Крипер взорвался!'],
     over:['Ну, крипер, погоди!','Респавн?'] },
@@ -341,6 +341,7 @@ function renderRecords(){
     tb.appendChild(tr);
   }
 }
+const TOOLS = { basket:'корзиной', racket:'ракеткой', stroller:'коляской', bag:'сумкой', gamepad:'геймпадом' };
 const itemLabel = p => p.items.map(i => i==='creeper' ? '🟩' : i).join('');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -458,7 +459,7 @@ function showIdle(){
   const p = cur();
   overlay.innerHTML = `<div class="card">
     <h2>${esc(p.name)}, готов${p.f ? 'а' : ''}?</h2>
-    <p>${p.racket ? 'Отбиваем' : 'Ловим'} ${itemLabel(p)} · Игра ${mode}${mode==='B' ? ' (быстрее)' : ''}</p>
+    <p>${p.racket ? 'Отбиваем' : 'Ловим'} ${itemLabel(p)} ${TOOLS[p.tool]} · Игра ${mode}${mode==='B' ? ' (быстрее)' : ''}</p>
     <div class="row"><button class="cbtn" id="ovStart" type="button">Старт</button></div>
   </div>`;
   overlay.hidden = false;
@@ -605,21 +606,7 @@ function drawWolf(now){
   const sx = left ? 282 : 358, sy = 214;
   ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(bp.x + (left ? 22 : -22), bp.y - 4); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(sx, sy + 34); ctx.lineTo(bp.x + (left ? 24 : -24), bp.y + 10); ctx.stroke();
-  // корзина или ракетка
-  ctx.fillStyle = seg(0.95);
-  if (p.racket){
-    ctx.save(); ctx.translate(bp.x, bp.y); ctx.rotate(left ? -0.5 : 0.5);
-    ctx.lineWidth = 8; ctx.strokeStyle = seg(0.95); ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, 44); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, -6, 26, 30, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(166,173,151,0.85)';
-    for (let i = -18; i <= 18; i += 9) for (let j = -22; j <= 14; j += 9){ if (i*i/(22*22) + (j+6)*(j+6)/(26*26) < 1) { ctx.beginPath(); ctx.arc(i, j, 2.4, 0, Math.PI*2); ctx.fill(); } }
-    ctx.restore();
-  } else {
-    ctx.beginPath(); ctx.moveTo(bp.x - 34, bp.y - 10); ctx.lineTo(bp.x + 34, bp.y - 10); ctx.lineTo(bp.x + 26, bp.y + 20); ctx.lineTo(bp.x - 26, bp.y + 20); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(166,173,151,0.75)'; ctx.lineWidth = 2;
-    for (let i = -20; i <= 20; i += 10){ ctx.beginPath(); ctx.moveTo(bp.x + i, bp.y - 8); ctx.lineTo(bp.x + i*0.8, bp.y + 18); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(bp.x - 36, bp.y - 12); ctx.lineTo(bp.x + 36, bp.y - 12); ctx.strokeStyle = seg(0.95); ctx.lineWidth = 6; ctx.stroke();
-  }
+  drawCatcher(p, bp, left);
   // голова: уши + фото
   const tilt = (left ? -1 : 1) * (top ? -0.12 : 0.1);
   ctx.save(); ctx.translate(cx, headY); ctx.rotate(tilt);
@@ -642,6 +629,49 @@ function drawWolf(now){
   }
   ctx.restore();
   if (G.flash > now){ ctx.strokeStyle = p.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, headR + 8, 0, Math.PI*2); ctx.stroke(); }
+  ctx.restore();
+}
+
+const LIGHT = 'rgba(166,173,151,0.9)';
+function drawCatcher(p, bp, left){
+  ctx.save(); ctx.translate(bp.x, bp.y); ctx.fillStyle = seg(0.95); ctx.strokeStyle = seg(0.95); ctx.lineCap = 'round';
+  const d = left ? -1 : 1; // сторона, куда «смотрит» ловушка (от волка наружу)
+  switch (p.tool){
+    case 'racket':
+      ctx.rotate(-0.5 * d);
+      ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, 44); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, -6, 26, 30, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = LIGHT;
+      for (let i = -18; i <= 18; i += 9) for (let j = -22; j <= 14; j += 9){ if (i*i/(22*22) + (j+6)*(j+6)/(26*26) < 1){ ctx.beginPath(); ctx.arc(i, j, 2.4, 0, Math.PI*2); ctx.fill(); } }
+      break;
+    case 'stroller':
+      ctx.scale(d, 1);
+      ctx.beginPath(); ctx.moveTo(-30, -6); ctx.lineTo(28, -6); ctx.lineTo(22, 16); ctx.lineTo(-24, 16); ctx.closePath(); ctx.fill(); // люлька
+      ctx.beginPath(); ctx.arc(2, -6, 30, Math.PI, Math.PI*1.5); ctx.lineTo(2, -6); ctx.closePath(); ctx.fill();        // капюшон
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-30, -6); ctx.lineTo(-42, -34); ctx.lineTo(-52, -34); ctx.stroke(); // ручка
+      ctx.beginPath(); ctx.arc(-16, 26, 8, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(16, 26, 8, 0, Math.PI*2); ctx.fill(); // колёса
+      ctx.fillStyle = LIGHT; ctx.beginPath(); ctx.arc(-16, 26, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(16, 26, 3, 0, Math.PI*2); ctx.fill();
+      break;
+    case 'bag':
+      ctx.beginPath(); ctx.moveTo(-30, -4); ctx.lineTo(30, -4); ctx.lineTo(24, 26); ctx.lineTo(-24, 26); ctx.closePath(); ctx.fill(); // сумка
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, -4, 18, Math.PI, 0); ctx.stroke();                                      // ручка
+      ctx.fillStyle = LIGHT; ctx.fillRect(-24, 2, 48, 3); ctx.beginPath(); ctx.arc(0, 12, 4, 0, Math.PI*2); ctx.fill();       // клапан и застёжка
+      break;
+    case 'gamepad':
+      rr(-40, -10, 80, 30, 14); ctx.fill();                                                                                  // корпус
+      ctx.beginPath(); ctx.ellipse(-28, 14, 13, 18, 0.3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(28, 14, 13, 18, -0.3, 0, Math.PI*2); ctx.fill(); // рукоятки
+      ctx.fillStyle = LIGHT;
+      ctx.fillRect(-30, -1, 4, 12); ctx.fillRect(-34, 3, 12, 4);                                                             // крестовина
+      [[22,-1],[30,5],[22,11],[14,5]].forEach(([x,y]) => { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI*2); ctx.fill(); }); // кнопки
+      ctx.beginPath(); ctx.arc(-12, 12, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(12, 12, 5, 0, Math.PI*2); ctx.fill(); // стики
+      ctx.fillRect(-10, -6, 20, 8);                                                                                          // тачпад
+      break;
+    default: // корзина
+      ctx.beginPath(); ctx.moveTo(-34, -10); ctx.lineTo(34, -10); ctx.lineTo(26, 20); ctx.lineTo(-26, 20); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = LIGHT; ctx.lineWidth = 2;
+      for (let i = -20; i <= 20; i += 10){ ctx.beginPath(); ctx.moveTo(i, -8); ctx.lineTo(i*0.8, 18); ctx.stroke(); }
+      ctx.strokeStyle = seg(0.95); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-36, -12); ctx.lineTo(36, -12); ctx.stroke();
+  }
   ctx.restore();
 }
 
