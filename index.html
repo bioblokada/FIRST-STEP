@@ -422,8 +422,9 @@ const G = {
 const LEVEL_STEP = 10; // очков на уровень
 const levelFor = score => Math.floor(score / LEVEL_STEP) + 1;
 function periodFor(score){
-  const base = mode==='A' ? 950 : 700, min = mode==='A' ? 260 : 200;
-  return Math.max(min, base * Math.pow(0.93, levelFor(score) - 1));
+  const lvl = levelFor(score);
+  if (mode === 'B') return Math.max(150, 520 * Math.pow(0.90, lvl - 1));   // Игра Б: сразу быстро, ускоряется резче
+  return Math.max(260, 950 * Math.pow(0.93, lvl - 1));
 }
 
 function startGame(){
@@ -460,7 +461,7 @@ function showIdle(){
   const p = cur();
   overlay.innerHTML = `<div class="card">
     <h2>${esc(p.name)}, готов${p.f ? 'а' : ''}?</h2>
-    <p>${p.racket ? 'Отбиваем' : 'Ловим'} ${itemLabel(p)} ${TOOLS[p.tool]} · Игра ${mode}${mode==='B' ? ' (быстрее)' : ''}</p>
+    <p>${p.racket ? 'Отбиваем' : 'Ловим'} ${itemLabel(p)} ${TOOLS[p.tool]} · Игра ${mode}${mode==='B' ? ' (гораздо сложнее)' : ''}</p>
     <div class="row"><button class="cbtn" id="ovStart" type="button">Старт</button></div>
   </div>`;
   overlay.hidden = false;
@@ -484,8 +485,8 @@ function setBasket(pos){
 
 function trySpawn(){
   const lvl = levelFor(G.score);
-  const baseP = (mode==='A' ? 0.30 : 0.42) + Math.min(0.3, (lvl - 1) * 0.015);
-  const maxE = (mode==='A' ? 2 : 3) + (lvl > 8 ? 1 : 0) + (lvl > 20 ? 1 : 0);
+  const baseP = mode==='A' ? 0.30 + Math.min(0.3, (lvl - 1) * 0.015) : Math.min(0.95, 0.62 + (lvl - 1) * 0.02);
+  const maxE = mode==='A' ? 2 + (lvl > 8 ? 1 : 0) + (lvl > 20 ? 1 : 0) : 4 + (lvl > 5 ? 1 : 0) + (lvl > 12 ? 1 : 0);
   if (G.eggs.length >= maxE) return;
   if (Math.random() > baseP) return;
   const free = [0,1,2,3].filter(c => !G.eggs.some(e => e.chute===c && e.step < 2));
