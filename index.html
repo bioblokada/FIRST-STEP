@@ -210,7 +210,7 @@
   <section class="info">
     <div>
       <h3>Как играть</h3>
-      <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 10 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа.</p>
+      <p>Корзина стоит у одного из четырёх лотков. Предмет, докатившийся до края без корзины, разбивается. Сначала всё катится медленно, каждые 10 очков новый уровень и скорость выше. На 200 и 500 очках промахи прощаются. 999 очков — победа. Иногда по лотку катится бомба с горящим фитилём: её ловить нельзя, поймаешь — всё взорвётся. Пусть падает мимо, за неё промах не считается.</p>
       <p>Клавиши: <kbd>Q</kbd> и <kbd>Z</kbd> — левые лотки, <kbd>O</kbd> и <kbd>M</kbd> — правые (или стрелки: <kbd>←</kbd> <kbd>↓</kbd> слева, <kbd>↑</kbd> <kbd>→</kbd> справа). <kbd>Enter</kbd> — старт, <kbd>Esc</kbd> — пауза. На телефоне просто нажимай на четверти экрана или на круглые кнопки.</p>
       <p>Фото лиц лежат в папке <code>photos/</code>: <code>2-1.jpg, 2-2.jpg…</code> Мусюня, <code>3-*.jpg</code> Тася, <code>4-*.jpg</code> Полина, <code>5-*.jpg</code> Мирон. Лицо меняется при промахе, новом уровне и каждые десять пойманных. Папа всегда волк.</p>
     </div>
@@ -381,6 +381,18 @@ function boom(){
   const g = ac.createGain(); g.gain.value = 0.35;
   src.connect(f).connect(g).connect(ac.destination); src.start();
 }
+function boomBig(){
+  if (!soundOn) return; const ac = audio(); if (!ac) return;
+  const n = ac.sampleRate * 1.2, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.6);
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(3000, ac.currentTime); f.frequency.exponentialRampToValueAtTime(80, ac.currentTime + 1.1);
+  const g = ac.createGain(); g.gain.value = 0.6;
+  src.connect(f).connect(g).connect(ac.destination); src.start();
+  const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(90, ac.currentTime); o.frequency.exponentialRampToValueAtTime(30, ac.currentTime + 0.8);
+  og.gain.setValueAtTime(0.5, ac.currentTime); og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.9);
+  o.connect(og).connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.9);
+}
 const SFX = {
   move:  () => play([520], {step:0.05, vol:0.05, wave:'square'}),
   catch: () => play([880, 1320], {step:0.06}),
@@ -429,23 +441,23 @@ function periodFor(score){
 
 function startGame(){
   G.running = true; G.paused = false; G.over = false; G.score = 0; G.misses = 0; G.basket = 0;
-  G.eggs = []; G.returns = []; G.broken = null; G.streak = 0; G.forgiven = {}; G.flash = 0;
+  G.eggs = []; G.returns = []; G.broken = null; G.fizzle = null; G.exploding = null; G.streak = 0; G.forgiven = {}; G.flash = 0;
   G.period = periodFor(0); G.lastTick = performance.now() + 500;
   nextFace(cur());
   G.bubble = { text: cur().start, until: performance.now() + 1600 };
   overlay.hidden = true; applyTheme(); SFX.start();
 }
 
-function endGame(win){
-  G.running = false; G.over = true;
+function endGame(win, reason){
+  G.running = false; G.over = true; G.exploding = null;
   const p = cur(), b = best[p.id];
   const record = G.score > b[mode];
   if (record){ b[mode] = G.score; LS.set('np_best', best); }
   renderPlayers();
-  const phrase = win ? 'ПОБЕДА!' : p.over[Math.floor(Math.random() * p.over.length)];
+  const phrase = win ? 'ПОБЕДА!' : reason === 'bomb' ? 'БАБАХ!' : p.over[Math.floor(Math.random() * p.over.length)];
   overlay.innerHTML = `<div class="card">
     <h2>${esc(phrase)}</h2>
-    <p>${esc(p.name)} · Игра ${mode}</p>
+    <p>${reason === 'bomb' ? 'Бомбу ловить нельзя! · ' : ''}${esc(p.name)} · Игра ${mode}</p>
     <div class="big">${G.score}</div>
     <p>${record ? 'Новый рекорд!' : 'Рекорд: ' + b[mode]}</p>
     <div class="row"><button class="cbtn" id="ovAgain" type="button">Ещё раз</button><button class="cbtn ghost" id="ovSwitch" type="button">Сменить игрока</button></div>
@@ -457,7 +469,7 @@ function endGame(win){
 }
 
 function showIdle(){
-  G.running = false; G.over = false; G.eggs = []; G.broken = null; G.bubble = null; G.score = 0; G.misses = 0; G.basket = 0;
+  G.running = false; G.over = false; G.eggs = []; G.broken = null; G.fizzle = null; G.exploding = null; G.bubble = null; G.score = 0; G.misses = 0; G.basket = 0;
   const p = cur();
   overlay.innerHTML = `<div class="card">
     <h2>${esc(p.name)}, готов${p.f ? 'а' : ''}?</h2>
@@ -479,6 +491,7 @@ function pauseToggle(){
 }
 
 function setBasket(pos){
+  if (G.exploding) return;
   if (!G.running || G.paused) { if (!G.running && !G.over) startGame(); else if (G.paused) pauseToggle(); return; }
   if (G.basket !== pos){ G.basket = pos; SFX.move(); }
 }
@@ -491,7 +504,10 @@ function trySpawn(){
   if (Math.random() > baseP) return;
   const free = [0,1,2,3].filter(c => !G.eggs.some(e => e.chute===c && e.step < 2));
   if (!free.length) return;
-  const its = cur().items; G.eggs.push({ chute: free[Math.floor(Math.random() * free.length)], step: 0, item: its[Math.floor(Math.random() * its.length)] });
+  const its = cur().items;
+  const bombP = G.score < 5 ? 0 : Math.min(0.22, (mode==='A' ? 0.06 : 0.10) + (lvl - 1) * 0.008);   // бомба: редко, чаще с уровнями
+  const bomb = Math.random() < bombP && !G.eggs.some(e => e.bomb);
+  G.eggs.push({ chute: free[Math.floor(Math.random() * free.length)], step: 0, item: bomb ? 'bomb' : its[Math.floor(Math.random() * its.length)], bomb });
 }
 
 function tick(now){
@@ -499,7 +515,11 @@ function tick(now){
   const arrived = G.eggs.filter(e => e.step >= STEPS);
   G.eggs = G.eggs.filter(e => e.step < STEPS);
   for (const e of arrived){
-    if (e.chute === G.basket){ caught(now); if (cur().racket) G.returns.push({ chute:e.chute, item:e.item, t0:now, dur:520 }); } else missed(e.chute, now, e.item);
+    if (e.bomb){
+      if (e.chute === G.basket) explode(now); else G.fizzle = { side: e.chute < 2 ? 0 : 1, chute: e.chute, t0: now, until: now + 1400 };
+    }
+    else if (e.chute === G.basket){ caught(now); if (cur().racket) G.returns.push({ chute:e.chute, item:e.item, t0:now, dur:520 }); }
+    else missed(e.chute, now, e.item);
     if (!G.running) return;
   }
   trySpawn();
@@ -519,6 +539,12 @@ function caught(now){
     G.bubble = { text: p.streak[Math.floor(Math.random() * p.streak.length)], until: now + 1400 };
   }
   if (G.score >= 999) endGame(true);
+}
+
+function explode(now){
+  G.running = false; G.exploding = { t0: now, until: now + 1100 }; G.eggs = []; G.bubble = null;
+  boomBig(); nextFace(cur());
+  setTimeout(() => { if (G.exploding) endGame(false, 'bomb'); }, 1100);
 }
 
 function missed(chute, now, item){
@@ -608,7 +634,20 @@ for (const sp of Object.values(SPRITES)) sp.rows = sp.rows.map(r => r.slice(0, 8
 
 function drawItem(x, y, text, size, alpha){
   ctx.save(); ctx.globalAlpha = alpha;
-  if (text === 'phone'){
+  if (text === 'bomb'){
+    const r = size * 0.4, t = performance.now();
+    ctx.save(); ctx.translate(x, y);
+    ctx.lineWidth = 3; ctx.strokeStyle = '#4a3a1a'; ctx.beginPath(); ctx.moveTo(r * 0.5, -r * 0.8); ctx.quadraticCurveTo(r * 1.1, -r * 1.5, r * 1.3, -r * 1.2); ctx.stroke(); // фитиль
+    const sp = r * (0.35 + 0.15 * Math.sin(t / 60));                                                                       // искра
+    ctx.fillStyle = '#ffd23a'; ctx.beginPath();
+    for (let i = 0; i < 8; i++){ const a = i * Math.PI / 4 + t / 300, rr2 = i % 2 ? sp * 0.45 : sp; ctx.lineTo(r * 1.3 + Math.cos(a) * rr2, -r * 1.2 + Math.sin(a) * rr2); }
+    ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(r * 1.3, -r * 1.2, sp * 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1d1d1f'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();                                   // корпус
+    ctx.lineWidth = 2.5; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    ctx.fillStyle = '#6d6d72'; rr(-r * 0.3, -r * 1.05, r * 0.6, r * 0.35, 2); ctx.fill();                                     // горловина
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.35, r * 0.22, r * 0.14, -0.7, 0, Math.PI*2); ctx.fill(); // блик
+    ctx.restore();
+  } else if (text === 'phone'){
     const w = size * 0.56, h = size * 0.98;
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.25);
     rr(-w/2, -h/2, w, h, size * 0.12); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = seg(0.95); ctx.stroke();
@@ -651,7 +690,7 @@ function drawItem(x, y, text, size, alpha){
 }
 
 function drawRolling(x, y, item){
-  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' || item === 'ball' ? 36 : SPRITES[item] ? 30 : 32, 1);
+  drawItem(x, y, item, item.startsWith('photo:') ? 40 : item === 'egg' || item === 'phone' || item === 'ball' || item === 'bomb' ? 36 : SPRITES[item] ? 30 : 32, 1);
 }
 
 function drawWolf(now){
@@ -870,6 +909,28 @@ function draw(now){
       ctx.fillStyle = '#b3261e'; ctx.font = '700 16px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('ПРОМАХ', fx, fy - 42);
     }
+  }
+  if (G.fizzle && G.fizzle.until > now){                                    // бомба упала мимо: шипит и гаснет
+    const F = G.fizzle, fx = F.side ? 470 : 170, k = (now - F.t0) / 1400;
+    ctx.save(); ctx.globalAlpha = 1 - k; drawItem(fx, 372, 'bomb', 34, 1);
+    ctx.fillStyle = '#6d6d72'; for (let i = 0; i < 4; i++){ ctx.beginPath(); ctx.arc(fx + 14 + i * 7, 344 - k * 40 - i * 9, 4 + i * 2, 0, Math.PI*2); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = seg(0.8); ctx.font = '700 14px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('ФУ-У-УХ', fx, 330);
+  }
+  if (G.exploding){                                                          // поймали бомбу: всё взрывается
+    const k = Math.min(1, (now - G.exploding.t0) / 1100);
+    ctx.save();
+    ctx.translate((Math.random() - 0.5) * 14 * (1 - k), (Math.random() - 0.5) * 14 * (1 - k));
+    const R = 60 + k * 520;
+    const grad = ctx.createRadialGradient(320, 230, 0, 320, 230, R);
+    grad.addColorStop(0, 'rgba(255,255,255,' + (1 - k * 0.6) + ')'); grad.addColorStop(0.35, 'rgba(255,210,60,' + (0.95 - k * 0.5) + ')');
+    grad.addColorStop(0.7, 'rgba(230,80,20,' + (0.9 - k * 0.6) + ')'); grad.addColorStop(1, 'rgba(60,20,10,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(320, 230, R, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1d1d1f'; ctx.font = '700 12px Rubik, sans-serif';
+    for (let i = 0; i < 14; i++){ const a = i * 0.45, d = 40 + k * 300 + i * 9; ctx.beginPath(); ctx.arc(320 + Math.cos(a) * d, 230 + Math.sin(a) * d * 0.7, 6 + (i % 3) * 3, 0, Math.PI*2); ctx.fill(); }
+    ctx.fillStyle = '#b3261e'; ctx.font = '700 46px "Rubik Mono One", Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.strokeText('БАБАХ!', 320, 200); ctx.fillText('БАБАХ!', 320, 200);
+    ctx.restore();
   }
   if (G.bubble && G.bubble.until > now){
     ctx.font = '700 15px Rubik, sans-serif'; const tw = ctx.measureText(G.bubble.text).width + 24;
