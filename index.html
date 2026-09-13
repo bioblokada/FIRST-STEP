@@ -739,13 +739,15 @@ function drawCatcher(p, bp, left){
   ctx.save(); ctx.translate(bp.x, bp.y); ctx.fillStyle = seg(0.95); ctx.strokeStyle = seg(0.95); ctx.lineCap = 'round';
   const d = left ? -1 : 1; // сторона, куда «смотрит» ловушка (от волка наружу)
   switch (p.tool){
-    case 'racket':
-      ctx.rotate(-0.5 * d);
+    case 'racket': {
+      const bottom = bp.y > 300;                       // у нижних лотков ракетка перевёрнута: ручка вверх
+      ctx.rotate(-0.5 * d * (bottom ? -1 : 1));
+      if (bottom) ctx.scale(1, -1);
       ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, 44); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(0, -6, 26, 30, 0, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = LIGHT;
       for (let i = -18; i <= 18; i += 9) for (let j = -22; j <= 14; j += 9){ if (i*i/(22*22) + (j+6)*(j+6)/(26*26) < 1){ ctx.beginPath(); ctx.arc(i, j, 2.4, 0, Math.PI*2); ctx.fill(); } }
-      break;
+      break; }
     case 'stroller':
       ctx.scale(d, 1);
       ctx.beginPath(); ctx.moveTo(-30, -6); ctx.lineTo(28, -6); ctx.lineTo(22, 16); ctx.lineTo(-24, 16); ctx.closePath(); ctx.fill(); // люлька
